@@ -5,7 +5,8 @@
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev": "just dev",
-    "test": "node --test --experimental-strip-types apps/api/src/_test_/*.test.ts packages/inference/src/_test_/*.test.ts packages/trpc/src/_test_/*.test.ts",
+    "test": "node --test --experimental-strip-types apps/api/src/_test_/*.test.ts packages/config/src/_test_/*.test.ts packages/inference/src/_test_/*.test.ts packages/trpc/src/_test_/*.test.ts",
+    "test:integration": "node --test --experimental-strip-types apps/api/src/_integration_/*.test.ts packages/trpc/src/_integration_/*.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p apps/web/tsconfig.json",
     "lint": "biome check --config-path biome.json .",
     "format": "biome format --config-path biome.json --write .",

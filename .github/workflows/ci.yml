@@ -35,3 +35,4 @@ jobs:
       - run: npm ci
       - run: npm run db:migrate
       - run: npm run check
+      - run: npm run test:integration

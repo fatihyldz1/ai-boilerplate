@@ -162,6 +162,11 @@ textarea {
 .inline-form .button {
   border-radius: 0 10px 10px 0;
 }
+.button-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
 .project-list {
   display: grid;
   gap: 10px;
@@ -177,6 +182,19 @@ textarea {
   padding: 12px;
   border-radius: 10px;
   background: #f3f5fa;
+}
+.project-actions,
+.project-edit-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.project-edit-form {
+  width: 100%;
+}
+.project-edit-form input {
+  min-width: 0;
+  padding: 7px 9px;
 }
 .answer {
   min-height: 160px;

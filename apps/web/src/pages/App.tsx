@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 import { authClient } from "../lib/auth.ts";
 import { trpc } from "../lib/trpc.ts";
 
@@ -12,11 +12,17 @@ export function App() {
   const deleteProject = trpc.projects.delete.useMutation({
     onSuccess: () => utils.projects.list.invalidate(),
   });
+  const renameProject = trpc.projects.rename.useMutation({
+    onSuccess: () => utils.projects.list.invalidate(),
+  });
   const [projectName, setProjectName] = useState("");
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editingProjectName, setEditingProjectName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [answer, setAnswer] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   async function addProject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,11 +36,14 @@ export function App() {
     setAnswer("");
     setError(null);
     setStreaming(true);
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
     try {
       const response = await fetch("/api/ai/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
+        signal: abortController.signal,
       });
       if (!response.ok) throw new Error((await response.json()).error ?? "AI request failed.");
       if (!response.body) throw new Error("AI response did not contain a stream.");
@@ -54,10 +63,24 @@ export function App() {
         }
       }
     } catch (caught) {
+      if (caught instanceof DOMException && caught.name === "AbortError") return;
       setError(caught instanceof Error ? caught.message : "AI request failed.");
     } finally {
+      abortControllerRef.current = null;
       setStreaming(false);
     }
+  }
+
+  function cancelAI() {
+    abortControllerRef.current?.abort();
+  }
+
+  async function saveProjectName(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingProjectId || !editingProjectName.trim()) return;
+    await renameProject.mutateAsync({ id: editingProjectId, name: editingProjectName });
+    setEditingProjectId(null);
+    setEditingProjectName("");
   }
 
   return (
@@ -89,14 +112,52 @@ export function App() {
           <ul className="project-list">
             {projects.data?.map((project) => (
               <li key={project.id}>
-                <span>{project.name}</span>
-                <button
-                  className="link-button danger"
-                  type="button"
-                  onClick={() => deleteProject.mutate({ id: project.id })}
-                >
-                  Delete
-                </button>
+                {editingProjectId === project.id ? (
+                  <form className="project-edit-form" onSubmit={saveProjectName}>
+                    <input
+                      aria-label={`Rename ${project.name}`}
+                      value={editingProjectName}
+                      onChange={(event) => setEditingProjectName(event.target.value)}
+                    />
+                    <button
+                      className="link-button"
+                      disabled={renameProject.isPending}
+                      type="submit"
+                    >
+                      Save
+                    </button>
+                    <button
+                      className="link-button"
+                      type="button"
+                      onClick={() => setEditingProjectId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </form>
+                ) : (
+                  <>
+                    <span>{project.name}</span>
+                    <span className="project-actions">
+                      <button
+                        className="link-button"
+                        type="button"
+                        onClick={() => {
+                          setEditingProjectId(project.id);
+                          setEditingProjectName(project.name);
+                        }}
+                      >
+                        Rename
+                      </button>
+                      <button
+                        className="link-button danger"
+                        type="button"
+                        onClick={() => deleteProject.mutate({ id: project.id })}
+                      >
+                        Delete
+                      </button>
+                    </span>
+                  </>
+                )}
               </li>
             ))}
           </ul>
@@ -113,9 +174,16 @@ export function App() {
               onChange={(event) => setPrompt(event.target.value)}
               placeholder="Ask something…"
             />
-            <button className="button primary" disabled={streaming} type="submit">
-              {streaming ? "Streaming…" : "Run AI"}
-            </button>
+            <div className="button-row">
+              <button className="button primary" disabled={streaming} type="submit">
+                {streaming ? "Streaming…" : "Run AI"}
+              </button>
+              {streaming && (
+                <button className="button subtle" type="button" onClick={cancelAI}>
+                  Cancel
+                </button>
+              )}
+            </div>
           </form>
           {error && (
             <p className="error" role="alert">

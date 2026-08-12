@@ -45,7 +45,13 @@ function readRuntimeEnvValue(key: keyof RuntimeEnv) {
       return readRequiredValue("BETTER_AUTH_URL");
     case "BETTER_AUTH_SECRET": {
       const secret = readRequiredValue("BETTER_AUTH_SECRET");
-      if (readOptionalValue("ENVIRONMENT") === "production" && secret.includes("change-me")) {
+      if (secret.length < 32) {
+        throw new Error("BETTER_AUTH_SECRET must be at least 32 characters.");
+      }
+      if (
+        readOptionalValue("ENVIRONMENT") === "production" &&
+        (secret.includes("change-me") || secret.includes("generate-a-random-secret"))
+      ) {
         throw new Error("BETTER_AUTH_SECRET must be changed in production.");
       }
       return secret;

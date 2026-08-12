@@ -26,5 +26,9 @@ db-reset:
 check:
     npm run check
 
+check-integration:
+    npm run db:migrate
+    npm run test:integration
+
 api *args:
     npm -w @app/api run {{args}}

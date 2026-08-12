@@ -6,43 +6,57 @@ import { appRouter, auth, createContext } from "@app/trpc";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { withRequestLogging } from "./logging.ts";
 
-async function handleAIStream(request: Request) {
-  if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session?.user) return Response.json({ error: "Sign in required." }, { status: 401 });
+type SessionReader = (headers: Headers) => Promise<{ user?: unknown } | null | undefined>;
+type TextStreamer = (input: Parameters<typeof streamText>[0]) => ReturnType<typeof streamText>;
 
-  const body = (await request.json().catch(() => null)) as { prompt?: unknown } | null;
-  const prompt = body?.prompt;
-  if (typeof prompt !== "string" || prompt.trim().length === 0 || prompt.length > 20_000) {
-    return Response.json(
-      { error: "prompt must be a non-empty string under 20,000 characters." },
-      { status: 400 },
-    );
-  }
+export function createAIStreamHandler(getSession: SessionReader, stream: TextStreamer) {
+  return async function handleAIStream(request: Request) {
+    if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
 
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      try {
-        for await (const event of streamText({ prompt, abortSignal: request.signal })) {
-          controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+    const body = (await request.json().catch(() => null)) as { prompt?: unknown } | null;
+    const prompt = body?.prompt;
+    if (typeof prompt !== "string" || prompt.trim().length === 0 || prompt.length > 20_000) {
+      return Response.json(
+        { error: "prompt must be a non-empty string under 20,000 characters." },
+        { status: 400 },
+      );
+    }
+
+    const session = await getSession(request.headers);
+    if (!session?.user) return Response.json({ error: "Sign in required." }, { status: 401 });
+
+    const encoder = new TextEncoder();
+    const responseStream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const event of stream({ prompt, abortSignal: request.signal })) {
+            controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+          }
+        } catch (error) {
+          controller.enqueue(
+            encoder.encode(
+              `${JSON.stringify({ type: "error", message: error instanceof Error ? error.message : "AI request failed." })}\n`,
+            ),
+          );
+        } finally {
+          controller.close();
         }
-      } catch (error) {
-        controller.enqueue(
-          encoder.encode(
-            `${JSON.stringify({ type: "error", message: error instanceof Error ? error.message : "AI request failed." })}\n`,
-          ),
-        );
-      } finally {
-        controller.close();
-      }
-    },
-  });
+      },
+    });
 
-  return new Response(stream, {
-    headers: { "Cache-Control": "no-cache", "Content-Type": "application/x-ndjson; charset=utf-8" },
-  });
+    return new Response(responseStream, {
+      headers: {
+        "Cache-Control": "no-cache",
+        "Content-Type": "application/x-ndjson; charset=utf-8",
+      },
+    });
+  };
 }
+
+const handleAIStream = createAIStreamHandler(
+  (headers) => auth.api.getSession({ headers }),
+  streamText,
+);
 
 export async function handleRequest(request: Request) {
   const url = new URL(request.url);
@@ -62,6 +76,11 @@ export async function handleRequest(request: Request) {
 
 export function startApi(port: number = env.PORT) {
   const server = createServer(async (incoming, outgoing) => {
+    const abortController = new AbortController();
+    incoming.once("aborted", () => abortController.abort());
+    incoming.once("close", () => {
+      if (!incoming.complete) abortController.abort();
+    });
     const origin = `http://${incoming.headers.host ?? `localhost:${port}`}`;
     const headers = Object.entries(incoming.headers).flatMap(([key, value]) =>
       value === undefined
@@ -75,6 +94,7 @@ export function startApi(port: number = env.PORT) {
         incoming.method && ["GET", "HEAD"].includes(incoming.method)
           ? undefined
           : (Readable.toWeb(incoming) as unknown as BodyInit),
+      signal: abortController.signal,
       duplex: "half",
     } as RequestInit & { duplex: "half" });
     const response = await withRequestLogging(handleRequest)(request);
