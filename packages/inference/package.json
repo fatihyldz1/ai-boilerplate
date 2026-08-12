@@ -1,0 +1,12 @@
+{
+  "name": "@app/inference",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@app/config": "*",
+    "openai": "^6.29.0"
+  }
+}

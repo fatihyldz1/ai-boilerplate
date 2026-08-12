@@ -1,0 +1,24 @@
+{
+  "name": "@app/trpc",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts"
+  },
+  "dependencies": {
+    "@app/config": "*",
+    "@trpc/server": "^11.10.0",
+    "better-auth": "^1.6.18",
+    "drizzle-orm": "^0.45.1",
+    "pg": "^8.18.0",
+    "ulid": "^3.0.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10"
+  }
+}

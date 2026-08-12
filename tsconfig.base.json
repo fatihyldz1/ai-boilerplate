@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "moduleDetection": "force",
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "esModuleInterop": true,
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@app/config": ["packages/config/src/index.ts"],
+      "@app/config/*": ["packages/config/src/*"],
+      "@app/inference": ["packages/inference/src/index.ts"],
+      "@app/trpc": ["packages/trpc/src/index.ts"],
+      "@app/trpc/*": ["packages/trpc/src/*"]
+    }
+  }
+}
