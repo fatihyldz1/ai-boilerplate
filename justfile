@@ -4,7 +4,7 @@ default:
     @just --list
 
 dev:
-    npx concurrently "just dev api" "npm -w @app/web run dev"
+    npx concurrently "just dev-api" "npm -w @app/web run dev"
 
 dev-api:
     docker compose up -d postgres
