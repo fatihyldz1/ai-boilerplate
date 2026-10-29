@@ -54,3 +54,28 @@ test("production authentication secrets require length and non-placeholder value
     },
   );
 });
+
+test("AI limits and gateway wire configuration reject invalid values", () => {
+  for (const value of ["0", "-1", "10ms", "1.5", "2147483648"]) {
+    withEnvironment({ AI_TIMEOUT_MS: value }, () =>
+      assert.throws(() => env.AI_TIMEOUT_MS, /positive 32-bit integers/),
+    );
+  }
+  withEnvironment({ OPENAI_TOKEN_LIMIT_FIELD: "unsupported" }, () =>
+    assert.throws(() => env.OPENAI_TOKEN_LIMIT_FIELD),
+  );
+  for (const value of [
+    "file:///tmp/provider",
+    "https://user:secret@example.com/v1",
+    "https://example.com/v1?token=secret",
+  ]) {
+    withEnvironment({ OPENAI_BASE_URL: value }, () => assert.throws(() => env.OPENAI_BASE_URL));
+  }
+  withEnvironment(
+    { OPENAI_TOKEN_LIMIT_FIELD: "max_tokens", OPENAI_BASE_URL: "http://localhost:8425/v1" },
+    () => {
+      assert.equal(env.OPENAI_TOKEN_LIMIT_FIELD, "max_tokens");
+      assert.equal(env.OPENAI_BASE_URL, "http://localhost:8425/v1");
+    },
+  );
+});

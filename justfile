@@ -30,5 +30,8 @@ check-integration:
     npm run db:migrate
     npm run test:integration
 
+check-container:
+    bash scripts/check-container.sh
+
 api *args:
     npm -w @app/api run {{args}}

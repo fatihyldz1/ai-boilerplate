@@ -4,7 +4,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./env": "./src/env.ts",
-    "./public-env": "./src/public-env.ts"
+    "./env": "./src/env.ts"
   }
 }

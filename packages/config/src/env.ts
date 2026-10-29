@@ -8,11 +8,18 @@ type RuntimeEnv = {
   ENVIRONMENT: EnvironmentName;
   LOG_FORMAT: LogFormat;
   PORT: number;
+  HOST: string;
   DB_URL: string;
   BETTER_AUTH_URL: string;
   BETTER_AUTH_SECRET: string;
   OPENAI_API_KEY?: string;
   OPENAI_MODEL: string;
+  OPENAI_BASE_URL: string;
+  OPENAI_TOKEN_LIMIT_FIELD: "max_completion_tokens" | "max_tokens";
+  AI_MAX_OUTPUT_TOKENS: number;
+  AI_TIMEOUT_MS: number;
+  AI_REQUESTS_PER_MINUTE: number;
+  AI_MAX_CONCURRENT_REQUESTS: number;
 };
 
 type EnvSource = Record<string, string | undefined>;
@@ -39,6 +46,8 @@ function readRuntimeEnvValue(key: keyof RuntimeEnv) {
       return readOptionalValue("LOG_FORMAT") === "json" ? "json" : "text";
     case "PORT":
       return parseInteger(readOptionalValue("PORT"), 3000);
+    case "HOST":
+      return readOptionalValue("HOST") || "127.0.0.1";
     case "DB_URL":
       return readRequiredValue("DB_URL");
     case "BETTER_AUTH_URL":
@@ -60,6 +69,37 @@ function readRuntimeEnvValue(key: keyof RuntimeEnv) {
       return readOptionalValue("OPENAI_API_KEY");
     case "OPENAI_MODEL":
       return readOptionalValue("OPENAI_MODEL") || "gpt-5-nano";
+    case "OPENAI_BASE_URL": {
+      const value = readOptionalValue("OPENAI_BASE_URL") || "https://api.openai.com/v1";
+      const url = new URL(value);
+      if (
+        !["http:", "https:"].includes(url.protocol) ||
+        url.username ||
+        url.password ||
+        url.search ||
+        url.hash
+      ) {
+        throw new Error(
+          "OPENAI_BASE_URL must be an HTTP(S) URL without credentials, query or fragment.",
+        );
+      }
+      return value;
+    }
+    case "OPENAI_TOKEN_LIMIT_FIELD": {
+      const value = readOptionalValue("OPENAI_TOKEN_LIMIT_FIELD") || "max_completion_tokens";
+      if (value !== "max_tokens" && value !== "max_completion_tokens") {
+        throw new Error("OPENAI_TOKEN_LIMIT_FIELD must be max_completion_tokens or max_tokens.");
+      }
+      return value;
+    }
+    case "AI_MAX_OUTPUT_TOKENS":
+      return parseInteger(readOptionalValue(key), 4096);
+    case "AI_TIMEOUT_MS":
+      return parseInteger(readOptionalValue(key), 120_000);
+    case "AI_REQUESTS_PER_MINUTE":
+      return parseInteger(readOptionalValue(key), 10);
+    case "AI_MAX_CONCURRENT_REQUESTS":
+      return parseInteger(readOptionalValue(key), 8);
     default:
       throw new Error(`Unsupported environment key: ${String(key)}`);
   }
@@ -108,8 +148,10 @@ function parseEnvironment(value: string | undefined): EnvironmentName {
 
 function parseInteger(value: string | undefined, fallback: number): number {
   if (!value || value === "") return fallback;
-  const parsed = Number.parseInt(value, 10);
-  if (Number.isNaN(parsed)) throw new Error(`Invalid integer environment value: ${value}`);
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 2_147_483_647) {
+    throw new Error("Integer environment values must be positive 32-bit integers.");
+  }
   return parsed;
 }
 

@@ -1,0 +1,82 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "react", "import"],
+  "categories": { "correctness": "error" },
+  "rules": {
+    "typescript/consistent-type-imports": [
+      "error",
+      { "prefer": "type-imports", "fixStyle": "inline-type-imports" }
+    ],
+    "react/refs": "off",
+    "react/set-state-in-effect": "off",
+    "react/preserve-manual-memoization": "off",
+    "react-hooks/exhaustive-deps": "error",
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_",
+        "ignoreRestSiblings": true
+      }
+    ]
+  },
+  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/drizzle/**"],
+  "overrides": [
+    {
+      "files": ["apps/web/src/**/*.{ts,tsx}"],
+      "rules": {
+        "import/no-cycle": "error",
+        "max-lines": ["error", { "max": 450, "skipBlankLines": true, "skipComments": true }]
+      }
+    },
+    {
+      "files": ["apps/web/src/components/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/containers/**",
+                  "**/lib/trpc*",
+                  "**/lib/auth*",
+                  "@/containers/*",
+                  "@/lib/trpc",
+                  "@/lib/auth"
+                ],
+                "message": "Pass data and actions to components from containers or hooks."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["apps/web/src/model/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "react",
+                  "react-dom",
+                  "**/hooks/**",
+                  "**/components/**",
+                  "**/containers/**",
+                  "**/providers/**",
+                  "**/data/**",
+                  "**/lib/**"
+                ],
+                "message": "Model modules contain pure behavior, independent of UI and requests."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

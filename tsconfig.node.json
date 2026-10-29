@@ -8,5 +8,5 @@
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true
   },
-  "include": ["apps/api/src/**/*.ts", "packages/**/*.ts"]
+  "include": ["apps/api/src/**/*.ts", "packages/**/*.ts", "scripts/**/*.ts"]
 }

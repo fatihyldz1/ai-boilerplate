@@ -1,27 +1,26 @@
 import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { authColumnNames, authTableNames } from "../../contracts/auth.ts";
 
-export const user = pgTable(authTableNames.user, {
-  id: text(authColumnNames.user.id).primaryKey(),
-  name: text(authColumnNames.user.name).notNull(),
-  email: text(authColumnNames.user.email).notNull().unique(),
-  emailVerified: boolean(authColumnNames.user.emailVerified).default(false).notNull(),
-  image: text(authColumnNames.user.image),
-  createdAt: timestamp(authColumnNames.user.createdAt).defaultNow().notNull(),
-  updatedAt: timestamp(authColumnNames.user.updatedAt).defaultNow().notNull(),
+export const user = pgTable("user", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  image: text("image"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const session = pgTable(
-  authTableNames.session,
+  "session",
   {
-    id: text(authColumnNames.session.id).primaryKey(),
-    expiresAt: timestamp(authColumnNames.session.expiresAt).notNull(),
-    token: text(authColumnNames.session.token).notNull().unique(),
-    createdAt: timestamp(authColumnNames.session.createdAt).defaultNow().notNull(),
-    updatedAt: timestamp(authColumnNames.session.updatedAt).defaultNow().notNull(),
-    ipAddress: text(authColumnNames.session.ipAddress),
-    userAgent: text(authColumnNames.session.userAgent),
-    userId: text(authColumnNames.session.userId)
+    id: text("id").primaryKey(),
+    expiresAt: timestamp("expires_at").notNull(),
+    token: text("token").notNull().unique(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
   },
@@ -29,36 +28,36 @@ export const session = pgTable(
 );
 
 export const account = pgTable(
-  authTableNames.account,
+  "account",
   {
-    id: text(authColumnNames.account.id).primaryKey(),
-    accountId: text(authColumnNames.account.accountId).notNull(),
-    providerId: text(authColumnNames.account.providerId).notNull(),
-    userId: text(authColumnNames.account.userId)
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    accessToken: text(authColumnNames.account.accessToken),
-    refreshToken: text(authColumnNames.account.refreshToken),
-    idToken: text(authColumnNames.account.idToken),
-    accessTokenExpiresAt: timestamp(authColumnNames.account.accessTokenExpiresAt),
-    refreshTokenExpiresAt: timestamp(authColumnNames.account.refreshTokenExpiresAt),
-    scope: text(authColumnNames.account.scope),
-    password: text(authColumnNames.account.password),
-    createdAt: timestamp(authColumnNames.account.createdAt).defaultNow().notNull(),
-    updatedAt: timestamp(authColumnNames.account.updatedAt).defaultNow().notNull(),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at"),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [index("account_user_id_idx").on(table.userId)],
 );
 
 export const verification = pgTable(
-  authTableNames.verification,
+  "verification",
   {
-    id: text(authColumnNames.verification.id).primaryKey(),
-    identifier: text(authColumnNames.verification.identifier).notNull(),
-    value: text(authColumnNames.verification.value).notNull(),
-    expiresAt: timestamp(authColumnNames.verification.expiresAt).notNull(),
-    createdAt: timestamp(authColumnNames.verification.createdAt).defaultNow().notNull(),
-    updatedAt: timestamp(authColumnNames.verification.updatedAt).defaultNow().notNull(),
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );

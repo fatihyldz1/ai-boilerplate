@@ -2,6 +2,7 @@ FROM node:24-bookworm-slim
 
 WORKDIR /app
 ENV NODE_ENV=production
+ENV HOST=0.0.0.0
 
 COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/package.json
@@ -9,7 +10,8 @@ COPY packages/config/package.json ./packages/config/package.json
 COPY packages/inference/package.json ./packages/inference/package.json
 COPY packages/trpc/package.json ./packages/trpc/package.json
 
-RUN npm ci --omit=dev --include-workspace-root=false \
+# Better Auth's optional generator peer must stay outside the runtime image.
+RUN npm ci --omit=dev --omit=peer --omit=optional --include-workspace-root=false \
   -w @app/api \
   -w @app/config \
   -w @app/inference \

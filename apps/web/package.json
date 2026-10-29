@@ -8,20 +8,23 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@app/inference": "*",
     "@app/trpc": "*",
     "@tanstack/react-query": "^5.59.16",
     "@trpc/client": "^11.9.0",
     "@trpc/react-query": "^11.9.0",
-    "better-auth": "^1.6.18",
+    "better-auth": "^1.7.14",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^6.0.2",
     "tailwindcss": "^4.1.18",
     "typescript": "^6.0.3",
-    "vite": "^8.0.16"
+    "vite": "^8.3.5"
   }
 }

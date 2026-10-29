@@ -36,3 +36,9 @@ jobs:
       - run: npm run db:migrate
       - run: npm run check
       - run: npm run test:integration
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/check-container.sh

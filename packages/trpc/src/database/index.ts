@@ -6,4 +6,5 @@ import * as schema from "./schema.ts";
 const pool = new Pool({ connectionString: env.DB_URL });
 
 export const database = drizzle({ client: pool, schema });
-export type DatabaseExecutor = typeof database;
+export type DatabaseTransaction = Parameters<Parameters<typeof database.transaction>[0]>[0];
+export type DatabaseExecutor = typeof database | DatabaseTransaction;

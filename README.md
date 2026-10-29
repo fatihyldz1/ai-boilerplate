@@ -10,11 +10,11 @@ A small full-stack starting point for building authenticated AI applications.
 - PostgreSQL + Drizzle
 - Better Auth with email/password
 - One authenticated project CRUD domain
-- One authenticated OpenAI streaming endpoint
+- One authenticated, bounded OpenAI-compatible streaming endpoint
 - Docker-based local database
 
 The starter intentionally does not include persisted chat history, multiple
-providers, tools, workflows, organizations, files, billing, or cloud-specific
+provider SDK adapters, tools, workflows, organizations, files, billing, or cloud-specific
 deployment. Add those when the product needs them.
 
 ## Quickstart
@@ -47,13 +47,21 @@ only to demonstrate the complete request path.
 
 ## Environment
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `DB_URL` | Yes | PostgreSQL connection string |
-| `BETTER_AUTH_URL` | Yes | Public URL used by Better Auth |
-| `BETTER_AUTH_SECRET` | Yes | Session signing secret; 32+ characters |
-| `OPENAI_API_KEY` | For AI | OpenAI API access |
-| `OPENAI_MODEL` | No | Defaults to `gpt-5-nano` |
+| Variable                     | Required | Purpose                                                                  |
+| ---------------------------- | -------- | ------------------------------------------------------------------------ |
+| `DB_URL`                     | Yes      | PostgreSQL connection string                                             |
+| `BETTER_AUTH_URL`            | Yes      | Public URL used by Better Auth                                           |
+| `BETTER_AUTH_SECRET`         | Yes      | Session signing secret; 32+ characters                                   |
+| `OPENAI_API_KEY`             | For AI   | Provider or gateway API access                                           |
+| `OPENAI_MODEL`               | No       | Defaults to `gpt-5-nano`                                                 |
+| `OPENAI_BASE_URL`            | No       | Defaults to `https://api.openai.com/v1`                                  |
+| `OPENAI_TOKEN_LIMIT_FIELD`   | No       | `max_completion_tokens` (default), or `max_tokens` for current modelgate |
+| `AI_MAX_OUTPUT_TOKENS`       | No       | Output and reasoning token cap; defaults to 4096                         |
+| `AI_TIMEOUT_MS`              | No       | Total AI deadline; defaults to 120000                                    |
+| `AI_REQUESTS_PER_MINUTE`     | No       | Per-user AI starts per process; defaults to 10                           |
+| `AI_MAX_CONCURRENT_REQUESTS` | No       | Concurrent AI streams per process; defaults to 8                         |
+| `HOST`                       | No       | API bind address; defaults to `127.0.0.1`, image defaults to `0.0.0.0`   |
+| `LOG_FORMAT`                 | No       | `text` (default) or `json`                                               |
 
 `OPENAI_API_KEY` may be empty during local setup. The application and database
 still run; only the AI playground is unavailable.
@@ -62,12 +70,18 @@ still run; only the AI playground is unavailable.
 
 ```text
 Web -> tRPC -> project domain -> database access -> PostgreSQL
-Web -> /api/ai/stream -> inference package -> OpenAI
+Web -> /api/ai/stream -> inference package -> OpenAI-compatible endpoint
 Web -> /api/auth/* -> Better Auth -> PostgreSQL
 ```
 
 Business logic lives in `packages/trpc/src/domain`. Database queries live in
 `packages/trpc/src/database/access`. HTTP adapters stay in `apps/api`.
+See [the engineering blueprint](docs/blueprint.md) for frontend boundaries,
+stream semantics, operational limits and Latticus source provenance.
+
+To use a gateway, set its `/v1` URL and key above. Current modelgate also needs
+`OPENAI_TOKEN_LIMIT_FIELD=max_tokens` and separately configured end users/use cases.
+No sibling checkout or gateway deployment is required for the default setup.
 
 ## Commands
 
@@ -78,6 +92,10 @@ just db-reset     # recreate the local database and migrate
 just db-down      # stop PostgreSQL
 just check        # typecheck, lint, tests and web build
 just check-integration # database-backed integration tests
+just check-container # isolated production image, migrations and auth/CRUD smoke test
+npm run format       # Oxfmt
+npm run format:check
+npm run test:web
 npm run db:generate
 npm run db:migrate
 ```
@@ -88,9 +106,9 @@ For a database-backed feature, add the schema, access functions, domain
 operations, contracts, router, then frontend query/mutations. Keep ownership
 checks in the server and use `protectedProcedure` for authenticated routes.
 
-For a model feature, extend `packages/inference/src/index.ts` only after a
-real requirement exists. The starter has one provider and one stream contract
-on purpose.
+For a model feature, keep one implementation in `packages/inference/src/index.ts`.
+Update the browser-safe `packages/inference/src/contracts.ts`, HTTP adapter,
+frontend reader and tests together when changing stream events.
 
 ## Production boundary
 
@@ -99,4 +117,15 @@ with `npm run build:web` and deploy `apps/web/dist` to a static host that
 proxies `/api` to the API. No cloud provider is assumed.
 
 Run `npm run db:migrate` against the target production database before starting
-the API. Never use `just db-reset` against production.
+the API. This uses only production dependencies and runs inside the API image.
+Generate SQL locally with development-only `drizzle-kit`. Never use `just db-reset`
+against production. The new forward migration adds only a project listing index.
+
+The AI limiter is per process: one active request per user, bounded starts per
+minute and bounded total concurrency. Use one API process for these limits; add
+shared gateway quotas and a real spending cap before scaling out or exposing
+paid inference through public signup. Missing usage on cancelled streams is
+unknown cost, not zero. The starter neither bills users nor estimates prices.
+
+The container check creates and removes its own temporary PostgreSQL container
+and network. It does not use your local `.env` or existing database.
