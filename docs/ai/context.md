@@ -28,8 +28,10 @@ const context = buildContext({
 
 [`runAgent`](../../packages/inference/src/agent.ts) supplies only the current run's user message, model steps and tool results.
 It does not accept client-supplied conversation history.
-Callers authorize tool data before returning it to the runtime.
-Source references remain in the supplied tool messages.
+[`projectReadTool`](../../packages/trpc/src/domain/project-agent.ts) authorizes database records before returning ID, name and source reference.
+The returned `source` stays in the tool message for the next model step.
+Instructions treat project names and tool results as untrusted data, not authority to execute actions.
+The final model answer can still omit a source; the runtime does not claim semantic enforcement.
 
 ## Input accounting and overflow
 
@@ -55,6 +57,7 @@ Choose storage from the access pattern; a vector database or GraphRAG is not a p
 ## Verification
 
 [`agent.test.ts`](../../packages/inference/src/_test_/agent.test.ts) checks deterministic assembly, source preservation, oversized results and isolated run history.
+[`project.test.ts`](../../packages/trpc/src/_integration_/project.test.ts) proves foreign records cannot pass through the real tool.
 
 ```bash
 node --test packages/inference/src/_test_/agent.test.ts

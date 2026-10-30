@@ -13,6 +13,21 @@ test("frontend transport passes cancellation and reads an authoritative final an
   assert.deepEqual(events.at(-1), { type: "complete", text: "hello" });
 });
 
+test("frontend reader accepts a buffered final answer after task-wide usage", async () => {
+  const events = await Array.fromAsync(
+    streamAI(
+      "read",
+      new AbortController().signal,
+      async () =>
+        new Response(
+          '{"type":"usage","usage":{"inputTokens":4,"outputTokens":6,"totalTokens":10}}\n{"type":"text-delta","delta":"Atlas"}\n{"type":"complete","text":"Atlas"}\n',
+        ),
+    ),
+  );
+  assert.deepEqual(events.at(-1), { type: "complete", text: "Atlas" });
+  assert.equal(events[0].type, "usage");
+});
+
 test("frontend transport rejects HTTP failures and truncated responses", async () => {
   const signal = new AbortController().signal;
   await assert.rejects(

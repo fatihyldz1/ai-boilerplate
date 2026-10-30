@@ -9,6 +9,8 @@ The original reference came from Latticus at
 
 `web -> tRPC -> domain -> database/access -> PostgreSQL`
 
+`authenticated POST /api/ai/projects -> project-agent domain -> runAgent -> model or get_project -> project domain -> database/access`
+
 Use tRPC for application queries and mutations, and authenticated POST NDJSON for
 inference. Ownership comes from the session, never a client-supplied user ID.
 Missing and foreign project IDs both return `NOT_FOUND`; unexpected server errors
@@ -30,7 +32,7 @@ Only `complete` means successful inference completion. EOF before a terminal
 event is failure. Malformed records fail explicitly. UTF-8 may span chunks; a
 final record needs no newline. Early reader exit cancels and releases its stream.
 
-The text adapter uses one OpenAI SDK configuration in
+The text and agent adapters share one OpenAI SDK configuration in
 [`provider.ts`](../packages/inference/src/provider.ts). It accepts an endpoint, key and model.
 Direct OpenAI uses `max_completion_tokens`; current modelgate uses `max_tokens`,
 selected by `OPENAI_TOKEN_LIMIT_FIELD`. Both share the same stream code. Configure
@@ -38,9 +40,13 @@ gateway end users/use cases outside the starter; `X-End-User` identifies the
 authenticated user, and `X-Request-ID` correlates requests. Provider keys stay on
 the server. SDK retries are disabled to avoid duplicated work or charges.
 
-The configured output-token bound includes reasoning tokens. Normal stop means inference completion.
-The text endpoint rejects tool calls, truncation, filtering, errors and missing finish reasons.
-Model-connected tools, persisted conversation history and reasoning controls remain outside the starter.
+The configured output-token bound includes reasoning tokens. `stop` means normal
+inference completion. The text endpoint rejects tool calls, truncation, filtering,
+errors and missing finish reasons. The separate agent adapter accepts explicit
+function-call steps, validates and executes allowed tools, then calls the model again.
+It buffers the final text and emits the same public events. It does not stream
+intermediate tool arguments or reasoning. Persisted conversation history and
+reasoning controls remain outside the starter.
 See the [official chat-completions reference](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)
 for token limits, finish reasons and streamed usage semantics.
 
@@ -48,7 +54,8 @@ for token limits, finish reasons and streamed usage semantics.
 
 Defaults: 10 AI starts per user per minute, one active request per user, eight
 active AI requests per API process, a 120-second deadline and 4,096 output tokens.
-The output bound applies per model call.
+Both AI routes share the same admission limiter. The output bound applies per
+model call; the project-agent example also enforces a task-wide allowance.
 The per-process limiter retains only current windows (at most 10,000 users).
 Concurrency reservations release on completion, failure, cancellation or timeout.
 
@@ -65,7 +72,8 @@ measures response creation; `http_finished` measures transport completion;
 AI records also contain `app_version`, `prompt_version` and a `provider_config_id`
 derived from non-secret configuration. `first_token_ms` measures AI execution start
 after admission to the first nonempty public text delta; it is null without text.
-The handler accepts numbered step metadata through its injected callback.
+For the buffered agent endpoint, this is final-answer latency, not provider token latency.
+`agent_step_finished` adds numbered model/tool steps under the same request ID.
 Budget rejection records `budget_exhausted`, distinct from ordinary inference errors.
 Interrupted streams may not report usage: `usage_known=false` means unknown,
 not zero cost. Cost is logged only when the gateway supplies it; the starter does
@@ -78,14 +86,39 @@ no hosted monitoring or alert delivery is configured by this starter.
 ## AI development principles
 
 Each guide pairs a design decision with working code, usage and verification.
-The linked documents describe the implemented building blocks and their limits.
+The examples remain small: one read-only project tool, sequential execution and
+two reference eval scenarios. Write tools, persistent memory and multiple agents
+are not implemented.
 
 | Design decision                                               | Implementation                                                                                              | Reason and tests                               |
 | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | Measure task correctness separately from inference completion | [`runEvaluation`](../packages/inference/src/evaluation.ts), [`eval:ai`](../scripts/eval-ai.ts)              | [Behavioral evaluation](ai/evaluation.md)      |
 | Compare versions without logging content                      | [`ai-stream.ts`](../apps/api/src/ai-stream.ts), [`logging.ts`](../apps/api/src/logging.ts)                  | [Versioned observability](ai/observability.md) |
+| Keep model choices separate from server authority             | [`projectReadTool`](../packages/trpc/src/domain/project-agent.ts)                                           | [Authorized tools](ai/tools.md)                |
 | Bound the whole task, not only each call                      | [`runAgent`](../packages/inference/src/agent.ts), [`createTaskBudget`](../packages/inference/src/budget.ts) | [Task-wide execution budgets](ai/execution.md) |
 | Assemble bounded context from explicit inputs                 | [`buildContext`](../packages/inference/src/context.ts)                                                      | [Model context](ai/context.md)                 |
+
+The project domain composes the reference implementation:
+
+```ts
+return await runAgent({
+  prompt: input.prompt,
+  instructions: PROJECT_AGENT_INSTRUCTIONS,
+  tools: [projectReadTool(input.userId)],
+  model,
+  limits: {
+    ...PROJECT_AGENT_LIMITS,
+    timeoutMs: env.AI_TIMEOUT_MS,
+    maxOutputTokens: env.AI_MAX_OUTPUT_TOKENS,
+  },
+  signal: input.signal,
+  onStep: input.onStep,
+});
+```
+
+[`runProjectAgent`](../packages/trpc/src/domain/project-agent.ts) receives identity
+from the authenticated HTTP handler, not from the request body or model arguments.
+The shared stream contract remains the browser interface; orchestration stays server-side.
 
 ## Frontend boundaries
 

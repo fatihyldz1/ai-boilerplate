@@ -34,6 +34,12 @@ const invalidAI = await fetch(`${base}/api/ai/stream`, {
   body: '{"prompt":""}',
 });
 assert.equal(invalidAI.status, 400);
+const invalidAgent = await fetch(`${base}/api/ai/projects`, {
+  method: "POST",
+  headers,
+  body: '{"prompt":""}',
+});
+assert.equal(invalidAgent.status, 400);
 console.log(
   "Production image passed migrations, auth cookies, protected CRUD and AI input checks.",
 );

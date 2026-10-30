@@ -6,6 +6,7 @@
     ".": "./src/index.ts",
     "./contracts": "./src/contracts.ts",
     "./agent": "./src/agent.ts",
+    "./agent-model": "./src/agent-model.ts",
     "./context": "./src/context.ts",
     "./budget": "./src/budget.ts",
     "./evaluation": "./src/evaluation.ts"

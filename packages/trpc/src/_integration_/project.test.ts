@@ -8,6 +8,7 @@ import { user } from "../database/schemas/auth.schema.ts";
 import * as Project from "../domain/project.ts";
 import * as ProjectAccess from "../database/access/project.access.ts";
 import { appRouter } from "../appRouter.ts";
+import { projectReadTool, runProjectAgent } from "../domain/project-agent.ts";
 
 after(async () => {
   await database.$client.end();
@@ -26,6 +27,41 @@ test("project CRUD is isolated by authenticated user", async () => {
 
   try {
     const created = await Project.createProject({ userId: userA.id, name: "Starter project" });
+    const signal = new AbortController().signal;
+    const tool = projectReadTool(userA.id);
+    const record = JSON.parse(await tool.execute({ id: created.id }, signal));
+    assert.equal(record.project.name, "Starter project");
+    assert.equal(record.source, `project:${created.id}`);
+    await assert.rejects(() => tool.execute({ id: created.id, userId: userB.id }, signal));
+    await assert.rejects(
+      () => projectReadTool(userB.id).execute({ id: created.id }, signal),
+      isNotFound,
+    );
+    await assert.rejects(
+      () => projectReadTool(userB.id).execute({ id: "missing" }, signal),
+      isNotFound,
+    );
+    let modelCalls = 0;
+    const answer = await runProjectAgent(
+      { prompt: `Read ${created.id}`, userId: userA.id },
+      async (context) => {
+        modelCalls += 1;
+        if (modelCalls === 1)
+          return {
+            text: null,
+            calls: [
+              {
+                id: "call-a",
+                type: "function",
+                function: { name: "get_project", arguments: JSON.stringify({ id: created.id }) },
+              },
+            ],
+          };
+        assert.match(context.messages.at(-1)?.content ?? "", /Starter project/);
+        return { text: "Starter project", calls: [] };
+      },
+    );
+    assert.equal(answer.text, "Starter project");
     assert.equal((await Project.listProjects(userA.id)).length, 1);
     assert.equal((await Project.listProjects(userB.id)).length, 0);
     await assert.rejects(

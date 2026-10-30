@@ -11,7 +11,7 @@ Step records distinguish model work from tool work without introducing a hosted 
 [`ai-stream.ts`](../../apps/api/src/ai-stream.ts) attaches version metadata to AI records:
 
 - `app_version` comes from `APP_VERSION`, with `development` as the local default.
-- `prompt_version` identifies the text instruction profile.
+- `prompt_version` identifies the text or project-agent instructions.
 - `model` identifies the configured model.
 - `provider_config_id` hashes the base URL, token-limit field and output limit, not the API key.
 
@@ -30,6 +30,8 @@ if (event.type === "text-delta" && event.delta.length && firstTokenMs === null) 
 
 `startedAt` is AI execution start after authentication, input validation and admission.
 `first_token_ms` is null if no text arrives. Empty deltas do not count.
+The project-agent endpoint buffers its answer, so this measures final-answer latency there.
+It is not a measurement of that provider's first generated token.
 
 [`runAgent`](../../packages/inference/src/agent.ts) emits `agent_step_finished` metadata through an injected callback.
 The request ID identifies the task; numbered `step_id` values identify model and tool steps.

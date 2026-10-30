@@ -11,12 +11,12 @@ A small full-stack starting point for building authenticated AI applications.
 - Better Auth with email/password
 - One authenticated project CRUD domain
 - Authenticated, bounded OpenAI-compatible text streaming
-- A bounded single-agent runner with validated read tools
+- A read-only project-agent example with task budgets and validated tool calls
 - An opt-in behavioral evaluation command
 - Docker-based local database
 
 The starter intentionally does not include persisted chat history, multiple
-provider SDK adapters, model-connected tools, workflow engines, organizations, files, billing, or cloud-specific
+provider SDK adapters, write tools, workflow engines, organizations, files, billing, or cloud-specific
 deployment. Add those when the product needs them.
 
 ## Quickstart
@@ -74,6 +74,7 @@ still run; only the AI playground is unavailable.
 ```text
 Web -> tRPC -> project domain -> database access -> PostgreSQL
 Web -> /api/ai/stream -> inference package -> OpenAI-compatible endpoint
+Authenticated caller -> /api/ai/projects -> project-agent domain -> model + project read tool
 Web -> /api/auth/* -> Better Auth -> PostgreSQL
 ```
 
@@ -117,9 +118,17 @@ frontend reader and tests together when changing stream events.
 
 ### AI development
 
-Follow the [AI development principles](docs/blueprint.md#ai-development-principles) and their topic guides.
-Each guide explains the reason, implementation, usage and tests for the available building blocks.
-The playground continues to use the text endpoint.
+For model features, follow the [AI development principles](docs/blueprint.md#ai-development-principles)
+and their topic guides. Each guide explains the reason, implementation, usage and tests.
+The playground uses the text endpoint. The project-agent endpoint is a separate,
+authenticated POST accepting the same `{ "prompt": "..." }` body and NDJSON contract.
+It reads a project by ID; it cannot create, rename or delete projects.
+See [the tool guide](docs/ai/tools.md) for a request example.
+
+The example uses Chat Completions function calls and requires model/gateway support.
+It runs calls sequentially and buffers the final answer. It has no persisted memory,
+write approvals or multiagent coordination. Its input-token accounting uses an estimate,
+not an exact provider tokenizer or a hard spending ledger.
 
 ## Production boundary
 

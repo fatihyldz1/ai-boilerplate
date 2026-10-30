@@ -3,7 +3,7 @@
 ## Why this code exists
 
 Per-call limits do not bound a loop that starts more calls.
-The single-agent runner therefore owns one budget for its entire model/tool sequence.
+The project-agent example therefore owns one budget for its entire model/tool sequence.
 The text endpoint keeps its existing single-call behavior.
 
 ## Implementation
@@ -31,11 +31,15 @@ It builds [context](context.md) for each model step and stores history only for 
 It has no automatic retries, parallel execution, persistent tasks or multiagent coordination.
 Add those only for a concrete requirement; an agent-count increase needs measured benefits in [evaluation](evaluation.md).
 
-Callers supply maximum model/tool counts, token allowances and a task deadline through the typed limits interface.
-The input allowance and output cap apply per call; the total token allowance applies to the whole run.
+The reference policy lives in [`PROJECT_AGENT_LIMITS`](../../packages/trpc/src/domain/project-agent.ts):
+
+- At most three model calls and two tool calls.
+- A 48,000-unit task token allowance and a 16,000-unit input estimate per model call.
+- `AI_MAX_OUTPUT_TOKENS` as the per-call output bound, including reasoning where the provider reports it.
+- `AI_TIMEOUT_MS` as the task deadline, inside the enclosing HTTP request deadline.
 
 The runtime is a separate module from the model adapter and HTTP transport.
-Callers supply the allowed tools, execution policy and model-step function.
+The domain supplies its allowed tools and policy; the provider adapter supplies model steps.
 
 ## Completion and cancellation
 
@@ -45,9 +49,10 @@ A normal model answer still requires separate task correctness checks.
 
 `withSignal` stops awaiting an uncooperative operation when the task is cancelled.
 The runtime stops scheduling and passes the signal to model and tool implementations.
-Cancellation is cooperative: an implementation that ignores its signal may still finish in the background.
+The SDK aborts model requests; a database read may still finish in the background.
+The tool checks cancellation again before returning its result.
 The HTTP handler releases admission once on each terminal path.
-Cancellation cannot undo committed external effects. Define reconciliation before adding write tools.
+Cancellation cannot undo committed external effects; follow the [write rules](tools.md#writes-and-retries) before adding them.
 
 ## Verification
 
