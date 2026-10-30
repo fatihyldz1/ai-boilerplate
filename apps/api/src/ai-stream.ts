@@ -1,5 +1,11 @@
 import { env } from "@app/config/env";
-import { InferenceError, type StreamTextInput } from "@app/inference";
+import {
+  InferenceError,
+  BudgetError,
+  providerConfigId,
+  TEXT_PROMPT_VERSION,
+  type StreamTextInput,
+} from "@app/inference";
 import type { AIStreamEvent, TokenUsage } from "@app/inference/contracts";
 import { createAIAdmission } from "./admission.ts";
 import { HttpInputError, readJsonBody } from "./http-input.ts";
@@ -12,6 +18,7 @@ export function createAIStreamHandler(
   getSession: SessionReader,
   stream: TextStreamer,
   acquire = createAIAdmission(),
+  promptVersion = TEXT_PROMPT_VERSION,
 ) {
   return async function handleAIStream(request: Request) {
     if (request.method !== "POST")
@@ -37,6 +44,9 @@ export function createAIStreamHandler(
       ...requestContext(request),
       user_id: session.user.id,
       model: env.OPENAI_MODEL,
+      app_version: env.APP_VERSION,
+      prompt_version: promptVersion,
+      provider_config_id: providerConfigId(),
     };
     const admission = acquire(session.user.id);
     if ("retryAfter" in admission) {
@@ -56,11 +66,18 @@ export function createAIStreamHandler(
       abortSignal: signal,
       userId: session.user.id,
       requestId: context.request_id,
+      onStep: (step) =>
+        log(
+          "agent_step_finished",
+          { ...context, ...step },
+          step.outcome === "error" ? "error" : "info",
+        ),
     });
     const encoder = new TextEncoder();
     let cancelled = false;
     let finished = false;
     let usage: TokenUsage | undefined;
+    let firstTokenMs: number | null = null;
     function finish(outcome: string, error?: unknown) {
       if (finished) return;
       finished = true;
@@ -71,6 +88,7 @@ export function createAIStreamHandler(
         {
           ...context,
           duration_ms: performance.now() - startedAt,
+          first_token_ms: firstTokenMs,
           outcome,
           input_tokens: usage?.inputTokens,
           output_tokens: usage?.outputTokens,
@@ -79,7 +97,7 @@ export function createAIStreamHandler(
           usage_known: usage !== undefined,
           error_type: error instanceof Error ? error.name : undefined,
         },
-        outcome === "error" || outcome === "timeout" ? "error" : "info",
+        ["error", "timeout", "budget_exhausted"].includes(outcome) ? "error" : "info",
       );
     }
     function onAbort() {
@@ -96,6 +114,9 @@ export function createAIStreamHandler(
             signal.throwIfAborted();
             if (step.done) throw new InferenceError("AI stream ended before completion.");
             const event = step.value;
+            if (event.type === "text-delta" && event.delta.length && firstTokenMs === null) {
+              firstTokenMs = performance.now() - startedAt;
+            }
             if (event.type === "usage") usage = event.usage;
             if (event.type === "complete" || event.type === "error") {
               await events.return(undefined);
@@ -109,7 +130,7 @@ export function createAIStreamHandler(
             }
           } catch (error) {
             if (!cancelled) {
-              finish("error", error);
+              finish(error instanceof BudgetError ? "budget_exhausted" : "error", error);
               const message = timeout.aborted
                 ? "AI request timed out."
                 : error instanceof InferenceError

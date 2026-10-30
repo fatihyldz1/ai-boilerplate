@@ -7,6 +7,7 @@ type LogFormat = "json" | "text";
 type RuntimeEnv = {
   ENVIRONMENT: EnvironmentName;
   LOG_FORMAT: LogFormat;
+  APP_VERSION: string;
   PORT: number;
   HOST: string;
   DB_URL: string;
@@ -44,6 +45,13 @@ function readRuntimeEnvValue(key: keyof RuntimeEnv) {
       return parseEnvironment(readOptionalValue("ENVIRONMENT"));
     case "LOG_FORMAT":
       return readOptionalValue("LOG_FORMAT") === "json" ? "json" : "text";
+    case "APP_VERSION": {
+      const value = readOptionalValue("APP_VERSION") || "development";
+      if (!/^[a-zA-Z0-9._-]{1,128}$/.test(value)) {
+        throw new Error("APP_VERSION must be a release identifier of at most 128 characters.");
+      }
+      return value;
+    }
     case "PORT":
       return parseInteger(readOptionalValue("PORT"), 3000);
     case "HOST":

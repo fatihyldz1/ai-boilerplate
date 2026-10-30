@@ -18,6 +18,12 @@ type LogFields = {
   usage_known?: boolean;
   reason?: string;
   error_type?: string;
+  app_version?: string;
+  prompt_version?: string;
+  provider_config_id?: string;
+  first_token_ms?: number | null;
+  step_id?: number;
+  step_type?: "model" | "tool";
 };
 
 const contexts = new WeakMap<Request, { request_id: string; method: string; path: string }>();

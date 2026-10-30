@@ -10,11 +10,11 @@ A small full-stack starting point for building authenticated AI applications.
 - PostgreSQL + Drizzle
 - Better Auth with email/password
 - One authenticated project CRUD domain
-- One authenticated, bounded OpenAI-compatible streaming endpoint
+- Authenticated, bounded OpenAI-compatible text streaming
 - Docker-based local database
 
 The starter intentionally does not include persisted chat history, multiple
-provider SDK adapters, tools, workflows, organizations, files, billing, or cloud-specific
+provider SDK adapters, model-connected tools, workflow engines, organizations, files, billing, or cloud-specific
 deployment. Add those when the product needs them.
 
 ## Quickstart
@@ -47,21 +47,22 @@ only to demonstrate the complete request path.
 
 ## Environment
 
-| Variable                     | Required | Purpose                                                                  |
-| ---------------------------- | -------- | ------------------------------------------------------------------------ |
-| `DB_URL`                     | Yes      | PostgreSQL connection string                                             |
-| `BETTER_AUTH_URL`            | Yes      | Public URL used by Better Auth                                           |
-| `BETTER_AUTH_SECRET`         | Yes      | Session signing secret; 32+ characters                                   |
-| `OPENAI_API_KEY`             | For AI   | Provider or gateway API access                                           |
-| `OPENAI_MODEL`               | No       | Defaults to `gpt-5-nano`                                                 |
-| `OPENAI_BASE_URL`            | No       | Defaults to `https://api.openai.com/v1`                                  |
-| `OPENAI_TOKEN_LIMIT_FIELD`   | No       | `max_completion_tokens` (default), or `max_tokens` for current modelgate |
-| `AI_MAX_OUTPUT_TOKENS`       | No       | Output and reasoning token cap; defaults to 4096                         |
-| `AI_TIMEOUT_MS`              | No       | Total AI deadline; defaults to 120000                                    |
-| `AI_REQUESTS_PER_MINUTE`     | No       | Per-user AI starts per process; defaults to 10                           |
-| `AI_MAX_CONCURRENT_REQUESTS` | No       | Concurrent AI streams per process; defaults to 8                         |
-| `HOST`                       | No       | API bind address; defaults to `127.0.0.1`, image defaults to `0.0.0.0`   |
-| `LOG_FORMAT`                 | No       | `text` (default) or `json`                                               |
+| Variable                     | Required | Purpose                                                                   |
+| ---------------------------- | -------- | ------------------------------------------------------------------------- |
+| `DB_URL`                     | Yes      | PostgreSQL connection string                                              |
+| `BETTER_AUTH_URL`            | Yes      | Public URL used by Better Auth                                            |
+| `BETTER_AUTH_SECRET`         | Yes      | Session signing secret; 32+ characters                                    |
+| `OPENAI_API_KEY`             | For AI   | Provider or gateway API access                                            |
+| `OPENAI_MODEL`               | No       | Defaults to `gpt-5-nano`                                                  |
+| `OPENAI_BASE_URL`            | No       | Defaults to `https://api.openai.com/v1`                                   |
+| `OPENAI_TOKEN_LIMIT_FIELD`   | No       | `max_completion_tokens` (default), or `max_tokens` for current modelgate  |
+| `AI_MAX_OUTPUT_TOKENS`       | No       | Output and reasoning token cap; defaults to 4096                          |
+| `AI_TIMEOUT_MS`              | No       | Total AI deadline; defaults to 120000                                     |
+| `AI_REQUESTS_PER_MINUTE`     | No       | Per-user AI starts per process; defaults to 10                            |
+| `AI_MAX_CONCURRENT_REQUESTS` | No       | Concurrent AI streams per process; defaults to 8                          |
+| `HOST`                       | No       | API bind address; defaults to `127.0.0.1`, image defaults to `0.0.0.0`    |
+| `LOG_FORMAT`                 | No       | `text` (default) or `json`                                                |
+| `APP_VERSION`                | No       | Release identifier in AI logs and eval reports; defaults to `development` |
 
 `OPENAI_API_KEY` may be empty during local setup. The application and database
 still run; only the AI playground is unavailable.
@@ -77,7 +78,7 @@ Web -> /api/auth/* -> Better Auth -> PostgreSQL
 Business logic lives in `packages/trpc/src/domain`. Database queries live in
 `packages/trpc/src/database/access`. HTTP adapters stay in `apps/api`.
 See [the engineering blueprint](docs/blueprint.md) for frontend boundaries,
-stream semantics, operational limits and Latticus source provenance.
+stream semantics, operational limits and AI development principles.
 
 To use a gateway, set its `/v1` URL and key above. Current modelgate also needs
 `OPENAI_TOKEN_LIMIT_FIELD=max_tokens` and separately configured end users/use cases.
@@ -106,9 +107,16 @@ For a database-backed feature, add the schema, access functions, domain
 operations, contracts, router, then frontend query/mutations. Keep ownership
 checks in the server and use `protectedProcedure` for authenticated routes.
 
-For a model feature, keep one implementation in `packages/inference/src/index.ts`.
+For a model feature, reuse the provider configuration in `packages/inference/src/provider.ts`.
+Keep text streaming in packages/inference/src/index.ts.
 Update the browser-safe `packages/inference/src/contracts.ts`, HTTP adapter,
 frontend reader and tests together when changing stream events.
+
+### AI development
+
+Follow the [AI development principles](docs/blueprint.md#ai-development-principles) and their topic guides.
+Each guide explains the reason, implementation, usage and tests for the available building blocks.
+The playground continues to use the text endpoint.
 
 ## Production boundary
 

@@ -56,6 +56,12 @@ test("production authentication secrets require length and non-placeholder value
 });
 
 test("AI limits and gateway wire configuration reject invalid values", () => {
+  withEnvironment({ APP_VERSION: "release-2026.10" }, () =>
+    assert.equal(env.APP_VERSION, "release-2026.10"),
+  );
+  withEnvironment({ APP_VERSION: "invalid release\nvalue" }, () =>
+    assert.throws(() => env.APP_VERSION),
+  );
   for (const value of ["0", "-1", "10ms", "1.5", "2147483648"]) {
     withEnvironment({ AI_TIMEOUT_MS: value }, () =>
       assert.throws(() => env.AI_TIMEOUT_MS, /positive 32-bit integers/),

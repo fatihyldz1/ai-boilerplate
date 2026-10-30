@@ -122,6 +122,22 @@ test("invalid provider usage fails at the boundary", async () => {
   );
 });
 
+test("inconsistent provider token totals cannot undercount a task budget", async () => {
+  await withFakeProvider(
+    (_request, response) =>
+      sendChunks(response, [
+        textChunk("hello", "stop"),
+        {
+          choices: [],
+          usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 1 },
+        },
+      ]),
+    async () => {
+      await assert.rejects(() => Array.fromAsync(streamText({ prompt: "hi" })), /invalid usage/);
+    },
+  );
+});
+
 test("an aborted provider stream never emits complete", async () => {
   await withFakeProvider(
     (_request, response) => {
