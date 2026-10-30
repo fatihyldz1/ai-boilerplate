@@ -5,6 +5,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./contracts": "./src/contracts.ts",
+    "./context": "./src/context.ts",
     "./evaluation": "./src/evaluation.ts"
   },
   "dependencies": {

@@ -84,6 +84,7 @@ The linked documents describe the implemented building blocks and their limits.
 | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | Measure task correctness separately from inference completion | [`runEvaluation`](../packages/inference/src/evaluation.ts), [`eval:ai`](../scripts/eval-ai.ts) | [Behavioral evaluation](ai/evaluation.md)      |
 | Compare versions without logging content                      | [`ai-stream.ts`](../apps/api/src/ai-stream.ts), [`logging.ts`](../apps/api/src/logging.ts)     | [Versioned observability](ai/observability.md) |
+| Assemble bounded context from explicit inputs                 | [`buildContext`](../packages/inference/src/context.ts)                                         | [Model context](ai/context.md)                 |
 
 ## Frontend boundaries
 
