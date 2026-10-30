@@ -13,6 +13,7 @@ A small full-stack starting point for building authenticated AI applications.
 - Authenticated, bounded OpenAI-compatible text streaming
 - A read-only project-agent example with task budgets and validated tool calls
 - Opt-in text and agent behavioral evaluations with safe execution events
+- Content-addressed agent release manifests and evaluation evidence
 - Docker-based local database
 
 The starter intentionally does not include persisted chat history, multiple
@@ -49,22 +50,24 @@ only to demonstrate the complete request path.
 
 ## Environment
 
-| Variable                     | Required | Purpose                                                                   |
-| ---------------------------- | -------- | ------------------------------------------------------------------------- |
-| `DB_URL`                     | Yes      | PostgreSQL connection string                                              |
-| `BETTER_AUTH_URL`            | Yes      | Public URL used by Better Auth                                            |
-| `BETTER_AUTH_SECRET`         | Yes      | Session signing secret; 32+ characters                                    |
-| `OPENAI_API_KEY`             | For AI   | Provider or gateway API access                                            |
-| `OPENAI_MODEL`               | No       | Defaults to `gpt-5-nano`                                                  |
-| `OPENAI_BASE_URL`            | No       | Defaults to `https://api.openai.com/v1`                                   |
-| `OPENAI_TOKEN_LIMIT_FIELD`   | No       | `max_completion_tokens` (default), or `max_tokens` for current modelgate  |
-| `AI_MAX_OUTPUT_TOKENS`       | No       | Output and reasoning token cap; defaults to 4096                          |
-| `AI_TIMEOUT_MS`              | No       | Total AI deadline; defaults to 120000                                     |
-| `AI_REQUESTS_PER_MINUTE`     | No       | Per-user AI starts per process; defaults to 10                            |
-| `AI_MAX_CONCURRENT_REQUESTS` | No       | Concurrent AI streams per process; defaults to 8                          |
-| `HOST`                       | No       | API bind address; defaults to `127.0.0.1`, image defaults to `0.0.0.0`    |
-| `LOG_FORMAT`                 | No       | `text` (default) or `json`                                                |
-| `APP_VERSION`                | No       | Release identifier in AI logs and eval reports; defaults to `development` |
+| Variable                     | Required               | Purpose                                                                   |
+| ---------------------------- | ---------------------- | ------------------------------------------------------------------------- |
+| `DB_URL`                     | Yes                    | PostgreSQL connection string                                              |
+| `BETTER_AUTH_URL`            | Yes                    | Public URL used by Better Auth                                            |
+| `BETTER_AUTH_SECRET`         | Yes                    | Session signing secret; 32+ characters                                    |
+| `OPENAI_API_KEY`             | For AI                 | Provider or gateway API access                                            |
+| `OPENAI_MODEL`               | No                     | Defaults to `gpt-5-nano`                                                  |
+| `OPENAI_BASE_URL`            | No                     | Defaults to `https://api.openai.com/v1`                                   |
+| `OPENAI_TOKEN_LIMIT_FIELD`   | No                     | `max_completion_tokens` (default), or `max_tokens` for current modelgate  |
+| `AI_MAX_OUTPUT_TOKENS`       | No                     | Output and reasoning token cap; defaults to 4096                          |
+| `AI_TIMEOUT_MS`              | No                     | Total AI deadline; defaults to 120000                                     |
+| `AI_REQUESTS_PER_MINUTE`     | No                     | Per-user AI starts per process; defaults to 10                            |
+| `AI_MAX_CONCURRENT_REQUESTS` | No                     | Concurrent AI streams per process; defaults to 8                          |
+| `HOST`                       | No                     | API bind address; defaults to `127.0.0.1`, image defaults to `0.0.0.0`    |
+| `LOG_FORMAT`                 | No                     | `text` (default) or `json`                                                |
+| `APP_VERSION`                | No                     | Release identifier in AI logs and eval reports; defaults to `development` |
+| `APP_SOURCE_REVISION`        | For release evaluation | Full Git revision supplied by the build/deployment pipeline               |
+| `APP_ARTIFACT_DIGEST`        | For release evaluation | Actual artifact identity as `sha256:` plus 64 hexadecimal characters      |
 
 `OPENAI_API_KEY` may be empty during local setup. The application and database
 still run; only the AI playground is unavailable.
@@ -102,6 +105,7 @@ npm run format:check
 npm run test:web
 npm run eval:ai -- --live # two paid model calls; not part of normal checks
 npm run eval:agent -- --live --repeat 3 # six scenarios per repeat; paid, opt-in
+npm run eval:agent -- --manifest # inspect release identity without model calls
 npm run db:generate
 npm run db:migrate
 ```
@@ -128,8 +132,11 @@ See [the tool guide](docs/ai/tools.md) for a request example.
 
 Agent evaluations share the production tool definition, policy and runtime, with
 synthetic records instead of a database. They check answers and execution paths.
-The [evaluation](docs/ai/evaluation.md) and [event](docs/ai/events.md) guides
-explain the code, rationale, commands and tests. No paid evaluations run in normal CI.
+The [evaluation](docs/ai/evaluation.md), [event](docs/ai/events.md) and
+[release](docs/ai/releases.md) guides explain the code, rationale, commands and tests.
+Use `npm run eval:agent -- --live --release --repeat 3` for a candidate with build
+identity configured; retain the emitted evidence with that artifact. The deployment
+pipeline must verify the supplied identity. No paid evaluations run in normal CI.
 
 The example uses Chat Completions function calls and requires model/gateway support.
 It runs calls sequentially and buffers the final answer. It has no persisted memory,

@@ -56,6 +56,18 @@ test("production authentication secrets require length and non-placeholder value
 });
 
 test("AI limits and gateway wire configuration reject invalid values", () => {
+  withEnvironment(
+    { APP_SOURCE_REVISION: "a".repeat(40), APP_ARTIFACT_DIGEST: "sha256:" + "b".repeat(64) },
+    () => {
+      assert.equal(env.APP_SOURCE_REVISION, "a".repeat(40));
+      assert.equal(env.APP_ARTIFACT_DIGEST, "sha256:" + "b".repeat(64));
+    },
+  );
+  for (const [key, value] of [
+    ["APP_SOURCE_REVISION", "main"],
+    ["APP_ARTIFACT_DIGEST", "latest"],
+  ] as const)
+    withEnvironment({ [key]: value }, () => assert.throws(() => env[key]));
   withEnvironment({ APP_VERSION: "release-2026.10" }, () =>
     assert.equal(env.APP_VERSION, "release-2026.10"),
   );

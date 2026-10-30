@@ -1,6 +1,12 @@
 import { env } from "@app/config/env";
 import { streamText } from "@app/inference";
-import { appRouter, auth, createContext, PROJECT_AGENT_PROMPT_VERSION } from "@app/trpc";
+import {
+  appRouter,
+  auth,
+  createContext,
+  PROJECT_AGENT_PROMPT_VERSION,
+  projectAgentRelease,
+} from "@app/trpc";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { createAIStreamHandler } from "./ai-stream.ts";
 import { startHttpServer } from "./http-server.ts";
@@ -19,6 +25,7 @@ const handleProjectAgent = createAIStreamHandler(
   streamProjectAgent,
   acquireAI,
   PROJECT_AGENT_PROMPT_VERSION,
+  projectAgentRelease,
 );
 
 export async function handleRequest(request: Request) {

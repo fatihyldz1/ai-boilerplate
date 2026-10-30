@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import type { AgentModel } from "@app/inference/agent";
 import { runEvaluation } from "@app/inference/evaluation";
+import { contentDigest } from "@app/inference/digest";
 import { withFakeProvider } from "../../../inference/src/_test_/fake-provider.ts";
 import {
   evaluateProjectAgent,
@@ -113,7 +114,7 @@ test("looping and unavailable tools remain execution errors in the evaluation de
   assert.equal(report.cases[0].events?.at(-1)?.reason_code, "tool_calls_exhausted");
 });
 
-test("agent eval CLI has explicit paid opt-in, bounded repeats", async () => {
+test("agent eval CLI has explicit paid opt-in, bounded repeats and release evidence", async () => {
   const run = promisify(execFile);
   const script = fileURLToPath(new URL("../../../../scripts/eval-agent.ts", import.meta.url));
   let requests = 0;
@@ -165,18 +166,37 @@ test("agent eval CLI has explicit paid opt-in, bounded repeats", async () => {
             env: {
               ...process.env,
               APP_VERSION: "development",
+              APP_SOURCE_REVISION: "",
+              APP_ARTIFACT_DIGEST: "",
             },
           }),
         );
       }
       assert.equal(requests, 0);
-      const { stdout } = await run(process.execPath, [script, "--live", "--repeat", "2"]);
-      const report = JSON.parse(stdout);
-      assert.equal(report.dataset.digest, projectAgentDatasetDigest);
-      assert.equal(report.dataset.repeats, 2);
-      assert.equal(report.total, 12);
-      assert.equal(report.passed, 12);
+      const identity = {
+        ...process.env,
+        APP_VERSION: "release-test",
+        APP_SOURCE_REVISION: "a".repeat(40),
+        APP_ARTIFACT_DIGEST: "sha256:" + "b".repeat(64),
+      };
+      const manifest = JSON.parse(
+        (await run(process.execPath, [script, "--manifest"], { env: identity })).stdout,
+      );
+      assert.equal(requests, 0);
+      const { stdout } = await run(
+        process.execPath,
+        [script, "--live", "--repeat", "2", "--release"],
+        { env: identity },
+      );
+      const evidence = JSON.parse(stdout);
+      assert.equal(evidence.release.release_id, manifest.release_id);
+      assert.equal(evidence.dataset.digest, projectAgentDatasetDigest);
+      assert.equal(evidence.dataset.repeats, 2);
+      assert.equal(evidence.report.total, 12);
+      assert.equal(evidence.report.passed, 12);
       assert.equal(requests, 16);
+      const { evidence_id, ...bound } = evidence;
+      assert.equal(evidence_id, contentDigest(bound));
       assert.doesNotMatch(stdout, /Foreign secret|COMPROMISED|eval-user|Read project/);
     },
   );

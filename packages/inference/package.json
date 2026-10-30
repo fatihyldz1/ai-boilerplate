@@ -10,6 +10,7 @@
     "./context": "./src/context.ts",
     "./budget": "./src/budget.ts",
     "./evaluation": "./src/evaluation.ts",
+    "./release": "./src/release.ts",
     "./digest": "./src/digest.ts"
   },
   "dependencies": {

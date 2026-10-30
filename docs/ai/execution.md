@@ -38,8 +38,8 @@ The reference policy lives in [`PROJECT_AGENT_LIMITS`](../../packages/trpc/src/d
 - `AI_MAX_OUTPUT_TOKENS` as the per-call output bound, including reasoning where the provider reports it.
 - `AI_TIMEOUT_MS` as the task deadline, inside the enclosing HTTP request deadline.
 
-`projectAgentLimits()` composes constants and environment values for production
-and evaluations, preventing a separate test-only policy.
+`projectAgentLimits()` composes the constants and environment values for production,
+evaluations and [release manifests](releases.md), preventing a separate test-only policy.
 
 The runtime is a separate module from the model adapter and HTTP transport.
 The domain supplies its allowed tools and policy; the provider adapter supplies model steps.

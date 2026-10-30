@@ -7,6 +7,7 @@ import {
   type StreamTextInput,
 } from "@app/inference";
 import type { AIStreamEvent, TokenUsage } from "@app/inference/contracts";
+import type { ReleaseManifest } from "@app/inference/release";
 import { createAIAdmission } from "./admission.ts";
 import { HttpInputError, readJsonBody } from "./http-input.ts";
 import { log, requestContext } from "./logging.ts";
@@ -19,6 +20,7 @@ export function createAIStreamHandler(
   stream: TextStreamer,
   acquire = createAIAdmission(),
   promptVersion = TEXT_PROMPT_VERSION,
+  releaseManifest?: () => ReleaseManifest,
 ) {
   return async function handleAIStream(request: Request) {
     if (request.method !== "POST")
@@ -47,6 +49,7 @@ export function createAIStreamHandler(
       app_version: env.APP_VERSION,
       prompt_version: promptVersion,
       provider_config_id: providerConfigId(),
+      ...(releaseManifest ? { release_id: releaseManifest().release_id } : {}),
     };
     const admission = acquire(session.user.id);
     if ("retryAfter" in admission) {

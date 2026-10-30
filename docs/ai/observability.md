@@ -19,6 +19,9 @@ Step records distinguish model work from tool work without introducing a hosted 
 [`logging.ts`](../../apps/api/src/logging.ts) supplies the shared request ID and structured output.
 Neither identifier establishes ownership or grants permission.
 Use a stable release identifier in deployments and bump prompt versions when instructions change.
+Project-agent logs also carry `release_id`, derived from the shared runtime definition
+and configured artifact identity. The [release guide](releases.md) explains how to
+retain the corresponding manifest and evaluation evidence without capturing content.
 
 The handler records the first nonempty public text delta separately from completion:
 
@@ -60,6 +63,7 @@ Raw prompts, answers, tool arguments and credentials remain outside these logs.
 2. Reproduce it with synthetic or authorized data. Remove sensitive data before storing a candidate scenario.
 3. Require human review of the data and expected behavior.
 4. Add the approved scenario to the [behavioral evaluation suite](evaluation.md).
+5. Evaluate the candidate against the same dataset/scorer and retain its [release evidence](releases.md).
 
 Keep raw traces out of fixtures. This process does not authorize collecting raw content in production logs.
 

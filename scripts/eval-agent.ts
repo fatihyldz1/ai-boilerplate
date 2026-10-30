@@ -1,7 +1,7 @@
 import { env } from "@app/config/env";
 import { runEvaluation } from "@app/inference/evaluation";
-import { providerConfigId } from "@app/inference";
-import { PROJECT_AGENT_PROMPT_VERSION } from "../packages/trpc/src/domain/project-agent-definition.ts";
+import { createEvaluationEvidence, requireReleaseIdentity } from "@app/inference/release";
+import { projectAgentRelease } from "../packages/trpc/src/domain/project-agent-definition.ts";
 import {
   evaluateProjectAgent,
   projectAgentScenarios,
@@ -12,12 +12,16 @@ import {
 async function main() {
   const args = process.argv.slice(2);
   const usage =
-    "Use --live [--repeat 1..20]. Live evaluation makes up to 18 paid model calls per repeat.";
+    "Use --manifest (no calls), or --live [--repeat 1..20] [--release]. Live evaluation makes up to 18 paid model calls per repeat.";
+  if (args.length === 1 && args[0] === "--manifest") {
+    console.log(JSON.stringify(projectAgentRelease(), null, 2));
+    return;
+  }
   let repeats = 1;
   const seen = new Set<string>();
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
-    if (seen.has(arg) || !["--live", "--repeat"].includes(arg)) throw new Error(usage);
+    if (seen.has(arg) || !["--live", "--repeat", "--release"].includes(arg)) throw new Error(usage);
     seen.add(arg);
     if (arg === "--repeat") {
       const value = args[++i];
@@ -26,6 +30,8 @@ async function main() {
     }
   }
   if (!seen.has("--live")) throw new Error(usage);
+  const release = projectAgentRelease();
+  if (seen.has("--release")) requireReleaseIdentity(release);
   const scenarios = Array.from({ length: repeats }, (_, index) =>
     projectAgentScenarios.map((scenario) => ({
       ...scenario,
@@ -34,25 +40,21 @@ async function main() {
   ).flat();
   const report = await runEvaluation(scenarios, (input) => evaluateProjectAgent(input), {
     app: env.APP_VERSION,
-    prompt: PROJECT_AGENT_PROMPT_VERSION,
-    model: env.OPENAI_MODEL,
-    provider: providerConfigId(),
+    prompt: release.prompt_version,
+    model: release.model,
+    provider: release.provider_config_id,
     scorer: PROJECT_AGENT_SCORER_VERSION,
   });
-  console.log(
-    JSON.stringify(
-      {
-        dataset: {
-          digest: projectAgentDatasetDigest,
-          scorer_version: PROJECT_AGENT_SCORER_VERSION,
-          repeats,
-        },
-        ...report,
-      },
-      null,
-      2,
-    ),
+  const evidence = createEvaluationEvidence(
+    release,
+    {
+      digest: projectAgentDatasetDigest,
+      scorer_version: PROJECT_AGENT_SCORER_VERSION,
+      repeats,
+    },
+    report,
   );
+  console.log(JSON.stringify(evidence, null, 2));
   if (report.passed !== report.total) process.exitCode = 1;
 }
 

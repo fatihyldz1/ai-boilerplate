@@ -26,6 +26,7 @@ type LogFields = {
   step_type?: "model" | "tool";
   tool_name?: string;
   reason_code?: string;
+  release_id?: string;
 };
 
 const contexts = new WeakMap<Request, { request_id: string; method: string; path: string }>();

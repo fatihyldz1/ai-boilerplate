@@ -58,6 +58,10 @@ including errors. Commands exit nonzero if any case fails or errors. Normal chec
 test the suite/CLI against scripted models and fake HTTP providers, never paid services.
 This CLI evaluates tasks, not HTTP authentication; keep integration tests for that path.
 
+For release review, use `--live --release --repeat 3` with build identity configured.
+`--manifest` prints identity without calls. The [release guide](releases.md) explains
+the manifest, dataset/scorer binding and pipeline responsibilities.
+
 ## Extend it
 
 Add initial state, allowed actions and explicit expected behavior for each case.

@@ -6,7 +6,7 @@ import {
   PROJECT_AGENT_INSTRUCTIONS,
   projectAgentLimits,
 } from "./project-agent-definition.ts";
-export { PROJECT_AGENT_PROMPT_VERSION } from "./project-agent-definition.ts";
+export { PROJECT_AGENT_PROMPT_VERSION, projectAgentRelease } from "./project-agent-definition.ts";
 
 export function projectReadTool(userId: string) {
   return createProjectReadTool(userId, Project.getProject);

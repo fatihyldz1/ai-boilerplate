@@ -8,6 +8,8 @@ type RuntimeEnv = {
   ENVIRONMENT: EnvironmentName;
   LOG_FORMAT: LogFormat;
   APP_VERSION: string;
+  APP_SOURCE_REVISION?: string;
+  APP_ARTIFACT_DIGEST?: string;
   PORT: number;
   HOST: string;
   DB_URL: string;
@@ -50,6 +52,18 @@ function readRuntimeEnvValue(key: keyof RuntimeEnv) {
       if (!/^[a-zA-Z0-9._-]{1,128}$/.test(value)) {
         throw new Error("APP_VERSION must be a release identifier of at most 128 characters.");
       }
+      return value;
+    }
+    case "APP_SOURCE_REVISION": {
+      const value = readOptionalValue(key) || undefined;
+      if (value && !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value))
+        throw new Error("APP_SOURCE_REVISION must be a full lowercase Git revision.");
+      return value;
+    }
+    case "APP_ARTIFACT_DIGEST": {
+      const value = readOptionalValue(key) || undefined;
+      if (value && !/^sha256:[a-f0-9]{64}$/.test(value))
+        throw new Error("APP_ARTIFACT_DIGEST must be a sha256 artifact digest.");
       return value;
     }
     case "PORT":

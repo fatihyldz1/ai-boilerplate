@@ -98,6 +98,7 @@ are not implemented.
 | Evaluate answers and tool trajectories separately from transport completion | [`runEvaluation`](../packages/inference/src/evaluation.ts), [`projectAgentScenarios`](../packages/trpc/evals/project-agent.ts), [`eval:agent`](../scripts/eval-agent.ts) | [Behavioral evaluation](ai/evaluation.md)      |
 | Compare versions without logging content                                    | [`ai-stream.ts`](../apps/api/src/ai-stream.ts), [`logging.ts`](../apps/api/src/logging.ts)                                                                               | [Versioned observability](ai/observability.md) |
 | Describe tests and live execution with the same events                      | [`AgentEvent`](../packages/inference/src/agent-events.ts), [`runAgent`](../packages/inference/src/agent.ts)                                                              | [Execution events](ai/events.md)               |
+| Bind evaluated behavior to a release and dataset                            | [`projectAgentRelease`](../packages/trpc/src/domain/project-agent-definition.ts), [`createEvaluationEvidence`](../packages/inference/src/release.ts)                     | [Release evidence](ai/releases.md)             |
 | Keep model choices separate from server authority                           | [`projectReadTool`](../packages/trpc/src/domain/project-agent.ts)                                                                                                        | [Authorized tools](ai/tools.md)                |
 | Bound the whole task, not only each call                                    | [`runAgent`](../packages/inference/src/agent.ts), [`createTaskBudget`](../packages/inference/src/budget.ts)                                                              | [Task-wide execution budgets](ai/execution.md) |
 | Assemble bounded context from explicit inputs                               | [`buildContext`](../packages/inference/src/context.ts)                                                                                                                   | [Model context](ai/context.md)                 |
@@ -149,6 +150,29 @@ event order. Six cases cover authorized reads, missing IDs, untrusted tool data,
 write refusal and inaccessible resources. Real SQL ownership stays in integration
 tests. `npm run eval:agent -- --live --repeat 3` is opt-in and paid; normal checks
 exercise the same code with fake providers. Reports omit content and retain errors.
+
+### Release evidence
+
+Version labels alone cannot establish which behavior passed evaluation. The domain
+builds a manifest from actual prompt/tool/policy definitions and configured build identity:
+
+```ts
+const release = projectAgentRelease();
+requireReleaseIdentity(release);
+const evidence = createEvaluationEvidence(
+  release,
+  { digest: projectAgentDatasetDigest, scorer_version: PROJECT_AGENT_SCORER_VERSION, repeats },
+  report,
+);
+```
+
+`npm run eval:agent -- --manifest` prints that manifest without model calls.
+`--live --release --repeat 3` requires `APP_VERSION`, `APP_SOURCE_REVISION` and
+`APP_ARTIFACT_DIGEST` before evaluating. Evidence binds the release, dataset, scorer
+and full report; project-agent logs carry its `release_id`. The deployment pipeline
+must verify the supplied artifact identity and preserve the evidence. No registry
+verification, signed attestation, hosted-model replay guarantee or rollout system is
+implied. See the [release guide](ai/releases.md) for trust and operating limits.
 
 ## Frontend boundaries
 
