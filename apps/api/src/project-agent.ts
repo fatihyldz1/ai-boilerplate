@@ -9,7 +9,7 @@ export async function* streamProjectAgent(input: StreamTextInput): AsyncGenerato
     userId: input.userId,
     requestId: input.requestId,
     signal: input.abortSignal,
-    onStep: input.onStep,
+    onEvent: input.onEvent,
   });
   if (result.usage) yield { type: "usage", usage: result.usage };
   if (result.text) yield { type: "text-delta", delta: result.text };

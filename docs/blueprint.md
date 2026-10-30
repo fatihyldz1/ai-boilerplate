@@ -74,6 +74,9 @@ derived from non-secret configuration. `first_token_ms` measures AI execution st
 after admission to the first nonempty public text delta; it is null without text.
 For the buffered agent endpoint, this is final-answer latency, not provider token latency.
 `agent_step_finished` adds numbered model/tool steps under the same request ID.
+Server-only `AgentEvent` values are shared by runtime tests and production logs.
+Registered tool names and structured reason codes explain steps; `agent_finished`
+also explains failures before another step starts. These are not browser stream events.
 Budget rejection records `budget_exhausted`, distinct from ordinary inference errors.
 Interrupted streams may not report usage: `usage_known=false` means unknown,
 not zero cost. Cost is logged only when the gateway supplies it; the starter does
@@ -94,6 +97,7 @@ are not implemented.
 | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | Measure task correctness separately from inference completion | [`runEvaluation`](../packages/inference/src/evaluation.ts), [`eval:ai`](../scripts/eval-ai.ts)              | [Behavioral evaluation](ai/evaluation.md)      |
 | Compare versions without logging content                      | [`ai-stream.ts`](../apps/api/src/ai-stream.ts), [`logging.ts`](../apps/api/src/logging.ts)                  | [Versioned observability](ai/observability.md) |
+| Describe tests and live execution with the same events        | [`AgentEvent`](../packages/inference/src/agent-events.ts), [`runAgent`](../packages/inference/src/agent.ts) | [Execution events](ai/events.md)               |
 | Keep model choices separate from server authority             | [`projectReadTool`](../packages/trpc/src/domain/project-agent.ts)                                           | [Authorized tools](ai/tools.md)                |
 | Bound the whole task, not only each call                      | [`runAgent`](../packages/inference/src/agent.ts), [`createTaskBudget`](../packages/inference/src/budget.ts) | [Task-wide execution budgets](ai/execution.md) |
 | Assemble bounded context from explicit inputs                 | [`buildContext`](../packages/inference/src/context.ts)                                                      | [Model context](ai/context.md)                 |
@@ -112,13 +116,24 @@ return await runAgent({
     maxOutputTokens: env.AI_MAX_OUTPUT_TOKENS,
   },
   signal: input.signal,
-  onStep: input.onStep,
+  onEvent: input.onEvent,
 });
 ```
 
 [`runProjectAgent`](../packages/trpc/src/domain/project-agent.ts) receives identity
 from the authenticated HTTP handler, not from the request body or model arguments.
 The shared stream contract remains the browser interface; orchestration stays server-side.
+
+Execution observers consume the runtime contract directly, rather than reconstructing
+decisions from final text:
+
+```ts
+const events: AgentEvent[] = [];
+const result = await runAgent({ ...input, onEvent: (event) => events.push(event) });
+```
+
+Only registered tool names, outcomes, timings and reason codes enter these events.
+Arguments remain available only in authorized execution or controlled test fixtures.
 
 ## Frontend boundaries
 

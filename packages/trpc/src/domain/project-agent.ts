@@ -1,5 +1,5 @@
 import { env } from "@app/config/env";
-import { readTool, runAgent, type AgentModel, type AgentStep } from "@app/inference/agent";
+import { readTool, runAgent, type AgentModel, type AgentEvent } from "@app/inference/agent";
 import { agentModel } from "@app/inference/agent-model";
 import { z } from "zod";
 import { projectIdInputSchema } from "../contracts/project.ts";
@@ -42,7 +42,7 @@ export async function runProjectAgent(
     userId: string;
     requestId?: string;
     signal?: AbortSignal;
-    onStep?: (step: AgentStep) => void;
+    onEvent?: (step: AgentEvent) => void;
   },
   model: AgentModel = agentModel(input),
 ) {
@@ -57,6 +57,6 @@ export async function runProjectAgent(
       maxOutputTokens: env.AI_MAX_OUTPUT_TOKENS,
     },
     signal: input.signal,
-    onStep: input.onStep,
+    onEvent: input.onEvent,
   });
 }

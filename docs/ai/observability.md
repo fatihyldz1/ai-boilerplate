@@ -33,9 +33,10 @@ if (event.type === "text-delta" && event.delta.length && firstTokenMs === null) 
 The project-agent endpoint buffers its answer, so this measures final-answer latency there.
 It is not a measurement of that provider's first generated token.
 
-[`runAgent`](../../packages/inference/src/agent.ts) emits `agent_step_finished` metadata through an injected callback.
+[`runAgent`](../../packages/inference/src/agent.ts) emits the [shared execution events](events.md) through `onEvent`.
 The request ID identifies the task; numbered `step_id` values identify model and tool steps.
-A step records its type, duration and completion/error outcome, not its arguments or result.
+A step records its type, registered tool name, duration, outcome and structured reason, not its arguments or result.
+`agent_finished` records the runtime's terminal reason, including failures before another step can start.
 The enclosing `ai_finished` record distinguishes completion, error, timeout, cancellation and budget exhaustion.
 Completion still means inference completion, not semantic task success.
 
@@ -64,7 +65,7 @@ Keep raw traces out of fixtures. This process does not authorize collecting raw 
 
 ## Verification
 
-[`logging.test.ts`](../../apps/api/src/_test_/logging.test.ts) checks versions, step metadata, first-text timing and content exclusion.
+[`logging.test.ts`](../../apps/api/src/_test_/logging.test.ts) checks versions, execution metadata, first-text timing and content exclusion.
 [`server.test.ts`](../../apps/api/src/_test_/server.test.ts) checks timeout, cancellation and reservation release.
 
 ```bash

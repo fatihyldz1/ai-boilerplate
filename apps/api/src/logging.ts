@@ -24,6 +24,8 @@ type LogFields = {
   first_token_ms?: number | null;
   step_id?: number;
   step_type?: "model" | "tool";
+  tool_name?: string;
+  reason_code?: string;
 };
 
 const contexts = new WeakMap<Request, { request_id: string; method: string; path: string }>();

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
-import { readTool, runAgent, type AgentModel, type AgentStep } from "../agent.ts";
+import { readTool, runAgent, type AgentModel, type AgentEvent } from "../agent.ts";
 import { createTaskBudget, withSignal } from "../budget.ts";
 import { buildContext, type ToolCall } from "../context.ts";
 
@@ -134,7 +134,7 @@ test("one absolute deadline interrupts work even if it ignores the signal", asyn
 
 test("agent completes a bounded read, preserves tool sources and emits only step metadata", async () => {
   let calls = 0;
-  const steps: AgentStep[] = [];
+  const events: AgentEvent[] = [];
   const model: AgentModel = async (context, options) => {
     assert.equal(options.maxOutputTokens, 100);
     calls += 1;
@@ -149,15 +149,22 @@ test("agent completes a bounded read, preserves tool sources and emits only step
     tools: [tool()],
     model,
     limits,
-    onStep: (step) => steps.push(step),
+    onEvent: (event) => events.push(event),
   });
   assert.equal(result.text, "Atlas");
   assert.deepEqual(result.usage, { inputTokens: 4, outputTokens: 6, totalTokens: 10 });
   assert.deepEqual(
-    steps.map((step) => step.step_type),
+    events
+      .filter((event) => event.event_type === "agent_step_finished")
+      .map((step) => step.step_type),
     ["model", "tool", "model"],
   );
-  assert.doesNotMatch(JSON.stringify(steps), /SECRET|record-a|Atlas/);
+  assert.equal(
+    events[1].event_type === "agent_step_finished" && events[1].tool_name,
+    "read_record",
+  );
+  assert.equal(events.at(-1)?.reason_code, "completed");
+  assert.doesNotMatch(JSON.stringify(events), /SECRET|record-a|Atlas/);
 });
 
 test("unknown tools and invalid arguments cannot reach a tool implementation", async () => {

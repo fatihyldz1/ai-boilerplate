@@ -66,12 +66,8 @@ export function createAIStreamHandler(
       abortSignal: signal,
       userId: session.user.id,
       requestId: context.request_id,
-      onStep: (step) =>
-        log(
-          "agent_step_finished",
-          { ...context, ...step },
-          step.outcome === "error" ? "error" : "info",
-        ),
+      onEvent: ({ event_type, ...event }) =>
+        log(event_type, { ...context, ...event }, event.outcome === "error" ? "error" : "info"),
     });
     const encoder = new TextEncoder();
     let cancelled = false;
@@ -96,6 +92,7 @@ export function createAIStreamHandler(
           cost_usd: usage?.costUsd,
           usage_known: usage !== undefined,
           error_type: error instanceof Error ? error.name : undefined,
+          reason_code: error instanceof BudgetError ? error.reasonCode : undefined,
         },
         ["error", "timeout", "budget_exhausted"].includes(outcome) ? "error" : "info",
       );

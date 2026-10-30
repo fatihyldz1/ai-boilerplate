@@ -58,11 +58,13 @@ test("AI telemetry records versions, first visible text and steps without conten
     const handler = createAIStreamHandler(
       async () => ({ user: { id: "user-a" } }),
       async function* (input): AsyncGenerator<AIStreamEvent> {
-        input.onStep?.({
+        input.onEvent?.({
+          event_type: "agent_step_finished",
           step_id: 1,
           step_type: "model",
           duration_ms: 1,
           outcome: mode === "error" ? "error" : "complete",
+          reason_code: mode === "error" ? "execution_error" : "step_completed",
         });
         yield { type: "text-delta", delta: "" };
         if (mode === "budget") throw new BudgetError("AI task model budget exhausted.");

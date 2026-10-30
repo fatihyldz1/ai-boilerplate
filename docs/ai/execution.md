@@ -40,6 +40,8 @@ The reference policy lives in [`PROJECT_AGENT_LIMITS`](../../packages/trpc/src/d
 
 The runtime is a separate module from the model adapter and HTTP transport.
 The domain supplies its allowed tools and policy; the provider adapter supplies model steps.
+The [shared event contract](events.md) reports precise termination codes for each
+budget, including input overflow and deadline expiry. It does not parse error text.
 
 ## Completion and cancellation
 

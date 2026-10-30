@@ -16,7 +16,7 @@ export function createTaskBudget(limits: TaskLimits, parentSignal?: AbortSignal)
   }
   const deadline = new AbortController();
   const timer = setTimeout(
-    () => deadline.abort(new BudgetError("AI task deadline exceeded.")),
+    () => deadline.abort(new BudgetError("AI task deadline exceeded.", "deadline_exceeded")),
     limits.timeoutMs,
   );
   timer.unref();
@@ -39,9 +39,10 @@ export function createTaskBudget(limits: TaskLimits, parentSignal?: AbortSignal)
         throw new BudgetError("Invalid model token reservation.");
       }
       const reserved = inputTokens + outputTokens;
-      if (modelCalls >= limits.maxModelCalls || reservedTokens + reserved > limits.maxTokens) {
-        throw new BudgetError("AI task model or token budget exhausted.");
-      }
+      if (modelCalls >= limits.maxModelCalls)
+        throw new BudgetError("AI task model budget exhausted.", "model_calls_exhausted");
+      if (reservedTokens + reserved > limits.maxTokens)
+        throw new BudgetError("AI task token budget exhausted.", "token_budget_exhausted");
       modelCalls += 1;
       reservedTokens += reserved;
       let settled = false;
@@ -55,13 +56,14 @@ export function createTaskBudget(limits: TaskLimits, parentSignal?: AbortSignal)
           }
           reservedTokens += usage.totalTokens - reserved;
           if (reservedTokens > limits.maxTokens)
-            throw new BudgetError("AI task token budget exhausted.");
+            throw new BudgetError("AI task token budget exhausted.", "token_budget_exhausted");
         },
       };
     },
     reserveTool() {
       check();
-      if (toolCalls >= limits.maxToolCalls) throw new BudgetError("AI task tool budget exhausted.");
+      if (toolCalls >= limits.maxToolCalls)
+        throw new BudgetError("AI task tool budget exhausted.", "tool_calls_exhausted");
       toolCalls += 1;
     },
     check,

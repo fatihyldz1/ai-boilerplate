@@ -33,7 +33,7 @@ export function buildContext(input: {
     new TextEncoder().encode(JSON.stringify({ messages, tools: input.tools })).length +
     256 * (messages.length + input.tools.length + 1);
   if (!Number.isSafeInteger(input.maxInputTokens) || input.maxInputTokens < estimatedInputTokens) {
-    throw new BudgetError("AI context exceeds its input allowance.");
+    throw new BudgetError("AI context exceeds its input allowance.", "context_overflow");
   }
   return { messages, tools: input.tools, estimatedInputTokens };
 }
