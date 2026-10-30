@@ -9,7 +9,8 @@
     "./agent-model": "./src/agent-model.ts",
     "./context": "./src/context.ts",
     "./budget": "./src/budget.ts",
-    "./evaluation": "./src/evaluation.ts"
+    "./evaluation": "./src/evaluation.ts",
+    "./digest": "./src/digest.ts"
   },
   "dependencies": {
     "@app/config": "*",

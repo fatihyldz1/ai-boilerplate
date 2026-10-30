@@ -31,12 +31,15 @@ It builds [context](context.md) for each model step and stores history only for 
 It has no automatic retries, parallel execution, persistent tasks or multiagent coordination.
 Add those only for a concrete requirement; an agent-count increase needs measured benefits in [evaluation](evaluation.md).
 
-The reference policy lives in [`PROJECT_AGENT_LIMITS`](../../packages/trpc/src/domain/project-agent.ts):
+The reference policy lives in [`PROJECT_AGENT_LIMITS`](../../packages/trpc/src/domain/project-agent-definition.ts):
 
 - At most three model calls and two tool calls.
 - A 48,000-unit task token allowance and a 16,000-unit input estimate per model call.
 - `AI_MAX_OUTPUT_TOKENS` as the per-call output bound, including reasoning where the provider reports it.
 - `AI_TIMEOUT_MS` as the task deadline, inside the enclosing HTTP request deadline.
+
+`projectAgentLimits()` composes constants and environment values for production
+and evaluations, preventing a separate test-only policy.
 
 The runtime is a separate module from the model adapter and HTTP transport.
 The domain supplies its allowed tools and policy; the provider adapter supplies model steps.

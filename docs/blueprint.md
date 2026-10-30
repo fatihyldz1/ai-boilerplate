@@ -89,18 +89,18 @@ no hosted monitoring or alert delivery is configured by this starter.
 ## AI development principles
 
 Each guide pairs a design decision with working code, usage and verification.
-The examples remain small: one read-only project tool, sequential execution and
-two reference eval scenarios. Write tools, persistent memory and multiple agents
+The examples remain small: one read-only project tool, sequential execution,
+two text scenarios and six agent scenarios. Write tools, persistent memory and multiple agents
 are not implemented.
 
-| Design decision                                               | Implementation                                                                                              | Reason and tests                               |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Measure task correctness separately from inference completion | [`runEvaluation`](../packages/inference/src/evaluation.ts), [`eval:ai`](../scripts/eval-ai.ts)              | [Behavioral evaluation](ai/evaluation.md)      |
-| Compare versions without logging content                      | [`ai-stream.ts`](../apps/api/src/ai-stream.ts), [`logging.ts`](../apps/api/src/logging.ts)                  | [Versioned observability](ai/observability.md) |
-| Describe tests and live execution with the same events        | [`AgentEvent`](../packages/inference/src/agent-events.ts), [`runAgent`](../packages/inference/src/agent.ts) | [Execution events](ai/events.md)               |
-| Keep model choices separate from server authority             | [`projectReadTool`](../packages/trpc/src/domain/project-agent.ts)                                           | [Authorized tools](ai/tools.md)                |
-| Bound the whole task, not only each call                      | [`runAgent`](../packages/inference/src/agent.ts), [`createTaskBudget`](../packages/inference/src/budget.ts) | [Task-wide execution budgets](ai/execution.md) |
-| Assemble bounded context from explicit inputs                 | [`buildContext`](../packages/inference/src/context.ts)                                                      | [Model context](ai/context.md)                 |
+| Design decision                                                             | Implementation                                                                                                                                                           | Reason and tests                               |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| Evaluate answers and tool trajectories separately from transport completion | [`runEvaluation`](../packages/inference/src/evaluation.ts), [`projectAgentScenarios`](../packages/trpc/evals/project-agent.ts), [`eval:agent`](../scripts/eval-agent.ts) | [Behavioral evaluation](ai/evaluation.md)      |
+| Compare versions without logging content                                    | [`ai-stream.ts`](../apps/api/src/ai-stream.ts), [`logging.ts`](../apps/api/src/logging.ts)                                                                               | [Versioned observability](ai/observability.md) |
+| Describe tests and live execution with the same events                      | [`AgentEvent`](../packages/inference/src/agent-events.ts), [`runAgent`](../packages/inference/src/agent.ts)                                                              | [Execution events](ai/events.md)               |
+| Keep model choices separate from server authority                           | [`projectReadTool`](../packages/trpc/src/domain/project-agent.ts)                                                                                                        | [Authorized tools](ai/tools.md)                |
+| Bound the whole task, not only each call                                    | [`runAgent`](../packages/inference/src/agent.ts), [`createTaskBudget`](../packages/inference/src/budget.ts)                                                              | [Task-wide execution budgets](ai/execution.md) |
+| Assemble bounded context from explicit inputs                               | [`buildContext`](../packages/inference/src/context.ts)                                                                                                                   | [Model context](ai/context.md)                 |
 
 The project domain composes the reference implementation:
 
@@ -110,11 +110,7 @@ return await runAgent({
   instructions: PROJECT_AGENT_INSTRUCTIONS,
   tools: [projectReadTool(input.userId)],
   model,
-  limits: {
-    ...PROJECT_AGENT_LIMITS,
-    timeoutMs: env.AI_TIMEOUT_MS,
-    maxOutputTokens: env.AI_MAX_OUTPUT_TOKENS,
-  },
+  limits: projectAgentLimits(),
   signal: input.signal,
   onEvent: input.onEvent,
 });
@@ -134,6 +130,25 @@ const result = await runAgent({ ...input, onEvent: (event) => events.push(event)
 
 Only registered tool names, outcomes, timings and reason codes enter these events.
 Arguments remain available only in authorized execution or controlled test fixtures.
+
+### Behavioral contracts
+
+A completed answer can hide an incorrect execution path. The agent scenarios run
+the same instructions, validated tool and limits against a synthetic project reader:
+
+```ts
+const report = await runEvaluation(
+  projectAgentScenarios,
+  (input) => evaluateProjectAgent(input),
+  versions,
+);
+```
+
+Scorers check the final structured result, actual lookup arguments, tool count and
+event order. Six cases cover authorized reads, missing IDs, untrusted tool data,
+write refusal and inaccessible resources. Real SQL ownership stays in integration
+tests. `npm run eval:agent -- --live --repeat 3` is opt-in and paid; normal checks
+exercise the same code with fake providers. Reports omit content and retain errors.
 
 ## Frontend boundaries
 

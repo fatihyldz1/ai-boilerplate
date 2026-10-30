@@ -12,7 +12,7 @@ A small full-stack starting point for building authenticated AI applications.
 - One authenticated project CRUD domain
 - Authenticated, bounded OpenAI-compatible text streaming
 - A read-only project-agent example with task budgets and validated tool calls
-- An opt-in behavioral evaluation command
+- Opt-in text and agent behavioral evaluations with safe execution events
 - Docker-based local database
 
 The starter intentionally does not include persisted chat history, multiple
@@ -101,6 +101,7 @@ npm run format       # Oxfmt
 npm run format:check
 npm run test:web
 npm run eval:ai -- --live # two paid model calls; not part of normal checks
+npm run eval:agent -- --live --repeat 3 # six scenarios per repeat; paid, opt-in
 npm run db:generate
 npm run db:migrate
 ```
@@ -124,6 +125,11 @@ The playground uses the text endpoint. The project-agent endpoint is a separate,
 authenticated POST accepting the same `{ "prompt": "..." }` body and NDJSON contract.
 It reads a project by ID; it cannot create, rename or delete projects.
 See [the tool guide](docs/ai/tools.md) for a request example.
+
+Agent evaluations share the production tool definition, policy and runtime, with
+synthetic records instead of a database. They check answers and execution paths.
+The [evaluation](docs/ai/evaluation.md) and [event](docs/ai/events.md) guides
+explain the code, rationale, commands and tests. No paid evaluations run in normal CI.
 
 The example uses Chat Completions function calls and requires model/gateway support.
 It runs calls sequentially and buffers the final answer. It has no persisted memory,

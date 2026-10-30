@@ -2,66 +2,82 @@
 
 ## Why this code exists
 
-A normally finished stream can contain an incorrect answer.
-The [stream contract](../blueprint.md#inference-contract) checks delivery, not task correctness.
-A separate evaluator lets model changes fail a task check without redefining transport success.
+A normally finished inference can contain an incorrect answer. A correct-looking
+answer can hide a wrong tool, wrong arguments or repeated reads. Evaluate both
+the result and its execution path, separately from transport completion.
 
 ## Implementation
 
-[`runEvaluation`](../../packages/inference/src/evaluation.ts) executes each scenario and then its scorer.
-It records `passed`, `failed` or `error` for every case.
-Execution errors and scorer errors remain distinct and stay in the denominator.
-Reports include scenario versions, application/prompt/model/provider/scorer identifiers, durations and available usage.
-They exclude prompts, answers and raw exceptions. Missing usage means unknown, not zero cost.
+[`runEvaluation`](../../packages/inference/src/evaluation.ts) executes each scenario
+and scorer. Cases record `passed`, `failed` or `error`; execution and scoring errors
+remain distinct and in the denominator. Typed outputs can carry the same
+[execution events](events.md) used in production. `EvaluationExecutionError`
+preserves safe events when an execution throws.
 
-[`scenarios.ts`](../../packages/inference/evals/scenarios.ts) contains two small reference tasks:
-an exact-word response and JSON field extraction.
-The exact-word scenario uses this shape:
+Reports include identifiers, durations, available usage and execution metadata,
+but omit inputs, answers, lookup arguments and raw errors. Missing usage is unknown,
+not zero cost. Scorers can inspect synthetic arguments in memory without exporting them.
 
-```ts
-{
-  id: "exact-word",
-  version: "1",
-  input: "Reply with exactly READY and nothing else.",
-  score: ({ text }) => text.trim() === "READY",
-}
-```
+| Suite         | Code                                                           | Checks                                                                                   |
+| ------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Text          | [scenarios.ts](../../packages/inference/evals/scenarios.ts)    | Exact-word output and structured extraction                                              |
+| Project agent | [project-agent.ts](../../packages/trpc/evals/project-agent.ts) | Authorized read, missing ID, untrusted name, write refusal, foreign and missing projects |
 
-These scorers test observable output rather than asking the model to grade itself.
-They demonstrate the mechanism; they are not a general product quality score.
+The agent suite shares production instructions, strict tool schema, output projection
+and limits from [project-agent-definition.ts](../../packages/trpc/src/domain/project-agent-definition.ts).
+It runs the real runtime/model adapter with an injected synthetic project reader.
+No database or account is needed. Integration tests still verify real SQL ownership;
+a fixture reader is not evidence that production authorization works.
+
+Read cases require exactly `model -> get_project -> model -> completed`, the right
+lookup identity/ID, exact synthetic name and source. Missing-ID and write cases
+require no tools. Foreign/missing cases require one failed read and no returned data.
+Expected not-found behavior passes its scenario despite the runtime error outcome.
+Other execution failures remain evaluation errors.
+
+Structured response requests make these reference assertions objective. They do not
+measure general conversational quality or prove universal prompt-injection resistance.
+The reviewed dataset digest covers inputs, fixtures, expectations and scorer version.
+Scorer functions are not serialized; bump their version when their meaning changes.
 
 ## Run it
 
-Set the provider credentials and model in `.env`. Set `APP_VERSION` to the release under evaluation.
-Then run:
-
 ```bash
 npm run eval:ai -- --live
+npm run eval:agent -- --live
+npm run eval:agent -- --live --repeat 3
 ```
 
-[`eval-ai.ts`](../../scripts/eval-ai.ts) makes two paid requests through the normal text adapter.
-Each request uses the configured timeout and output limit. SDK retries remain disabled.
-The command prints a JSON report and exits unsuccessfully if any case fails or errors.
-Without `--live`, it exits before making model calls and explains the cost.
-Normal `just check` and integration tests never run paid evaluations.
+The text command makes two paid calls. Each agent repeat runs six cases and can make
+up to eighteen paid calls within the normal task limits. `--repeat` accepts 1–20;
+the default is one. Commands require explicit `--live`; invalid flags fail before
+model calls. SDK retries remain disabled.
+
+Each repeat starts fresh context and fixture state. Reports retain every repetition,
+including errors. Commands exit nonzero if any case fails or errors. Normal checks
+test the suite/CLI against scripted models and fake HTTP providers, never paid services.
+This CLI evaluates tasks, not HTTP authentication; keep integration tests for that path.
 
 ## Extend it
 
-Define initial state and permitted effects in the scenario input for a product task.
-Add a deterministic scorer when the result is verifiable.
-For tool scenarios, check arguments, repeated effects and resulting application state in a task-specific test.
-The reference CLI evaluates text only; database-backed tool checks remain integration tests.
-If a criterion requires judgment, calibrate human or model judgments separately from these assertions.
+Add initial state, allowed actions and explicit expected behavior for each case.
+Check actual arguments, repeated effects, event order and final state for tool tasks.
+Use deterministic checks for objective requirements; calibrate human/model judgment
+separately when meaning cannot be reduced to an exact contract.
 
-Bump scenario and scorer versions when their meaning changes.
-Compare the same scenarios and limits across releases; repeat runs to measure consistency.
-Production examples follow the [review process](observability.md#regression-scenarios).
+Keep production samples out of fixtures until authorized, sanitized and reviewed
+through the [regression process](observability.md#regression-scenarios).
+Compare the same dataset and limits across releases. Repeated runs measure
+consistency, not correctness for every production input.
 
 ## Verification
 
-[`evaluation.test.ts`](../../packages/inference/src/_test_/evaluation.test.ts) proves that incorrect answers fail and errors remain in reports.
-It also verifies the reference scorers against malformed and incorrect outputs.
-
 ```bash
 node --test packages/inference/src/_test_/evaluation.test.ts
+node --test packages/trpc/src/_test_/project-agent-evaluation.test.ts
+just check-integration
 ```
+
+Tests reject correct-looking answers with absent, repeated or wrongly targeted tools,
+retain looping runs as execution errors, check event order and verify CLI opt-in and
+repetition limits without live credentials.

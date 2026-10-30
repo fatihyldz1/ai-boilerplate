@@ -11,6 +11,7 @@
     "test": "node --test apps/api/src/_test_/*.test.ts packages/config/src/_test_/*.test.ts packages/inference/src/_test_/*.test.ts packages/trpc/src/_test_/*.test.ts \"apps/web/src/**/*.test.ts\"",
     "test:web": "node --test \"apps/web/src/**/*.test.ts\"",
     "eval:ai": "node scripts/eval-ai.ts",
+    "eval:agent": "node scripts/eval-agent.ts",
     "test:integration": "node --test apps/api/src/_integration_/*.test.ts packages/trpc/src/_integration_/*.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p apps/web/tsconfig.json",
     "lint": "oxlint --deny-warnings",

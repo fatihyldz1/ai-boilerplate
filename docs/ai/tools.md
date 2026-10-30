@@ -11,6 +11,10 @@ It reuses the starter's example domain instead of introducing product-specific b
 [`projectReadTool`](../../packages/trpc/src/domain/project-agent.ts) closes over the authenticated user ID.
 Its strict Zod schema accepts only a project ID. The same schema produces the model's JSON schema.
 Extra arguments, including a model-generated `userId`, fail validation.
+The shared [`createProjectReadTool`](../../packages/trpc/src/domain/project-agent-definition.ts)
+accepts the reader implementation: production supplies the authorized project domain,
+while evaluations supply synthetic records. Schema, projection and instructions are
+shared; the fixture reader does not replace real database ownership tests.
 
 ```ts
 async execute({ id }, signal) {
