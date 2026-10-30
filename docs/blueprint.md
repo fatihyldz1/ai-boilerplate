@@ -80,9 +80,10 @@ no hosted monitoring or alert delivery is configured by this starter.
 Each guide pairs a design decision with working code, usage and verification.
 The linked documents describe the implemented building blocks and their limits.
 
-| Design decision                          | Implementation                                                                             | Reason and tests                               |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------- |
-| Compare versions without logging content | [`ai-stream.ts`](../apps/api/src/ai-stream.ts), [`logging.ts`](../apps/api/src/logging.ts) | [Versioned observability](ai/observability.md) |
+| Design decision                                               | Implementation                                                                                 | Reason and tests                               |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Measure task correctness separately from inference completion | [`runEvaluation`](../packages/inference/src/evaluation.ts), [`eval:ai`](../scripts/eval-ai.ts) | [Behavioral evaluation](ai/evaluation.md)      |
+| Compare versions without logging content                      | [`ai-stream.ts`](../apps/api/src/ai-stream.ts), [`logging.ts`](../apps/api/src/logging.ts)     | [Versioned observability](ai/observability.md) |
 
 ## Frontend boundaries
 

@@ -56,7 +56,7 @@ Raw prompts, answers, tool arguments and credentials remain outside these logs.
 1. Identify a failure through permitted telemetry or explicit user feedback.
 2. Reproduce it with synthetic or authorized data. Remove sensitive data before storing a candidate scenario.
 3. Require human review of the data and expected behavior.
-4. Add the approved scenario to the regression suite.
+4. Add the approved scenario to the [behavioral evaluation suite](evaluation.md).
 
 Keep raw traces out of fixtures. This process does not authorize collecting raw content in production logs.
 

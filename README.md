@@ -11,6 +11,7 @@ A small full-stack starting point for building authenticated AI applications.
 - Better Auth with email/password
 - One authenticated project CRUD domain
 - Authenticated, bounded OpenAI-compatible text streaming
+- An opt-in behavioral evaluation command
 - Docker-based local database
 
 The starter intentionally does not include persisted chat history, multiple
@@ -97,6 +98,7 @@ just check-container # isolated production image, migrations and auth/CRUD smoke
 npm run format       # Oxfmt
 npm run format:check
 npm run test:web
+npm run eval:ai -- --live # two paid model calls; not part of normal checks
 npm run db:generate
 npm run db:migrate
 ```
