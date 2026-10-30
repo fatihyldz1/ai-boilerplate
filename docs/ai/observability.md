@@ -31,7 +31,7 @@ if (event.type === "text-delta" && event.delta.length && firstTokenMs === null) 
 `startedAt` is AI execution start after authentication, input validation and admission.
 `first_token_ms` is null if no text arrives. Empty deltas do not count.
 
-The stream handler accepts numbered step metadata through its injected callback.
+[`runAgent`](../../packages/inference/src/agent.ts) emits `agent_step_finished` metadata through an injected callback.
 The request ID identifies the task; numbered `step_id` values identify model and tool steps.
 A step records its type, duration and completion/error outcome, not its arguments or result.
 The enclosing `ai_finished` record distinguishes completion, error, timeout, cancellation and budget exhaustion.

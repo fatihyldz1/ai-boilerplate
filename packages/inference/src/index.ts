@@ -1,4 +1,5 @@
 import { env } from "@app/config/env";
+import type { AgentStep } from "./agent.ts";
 import type { AIStreamEvent } from "./contracts.ts";
 import { InferenceError } from "./errors.ts";
 import { createProvider, parseUsage, providerHeaders, tokenLimit } from "./provider.ts";
@@ -12,12 +13,7 @@ export type StreamTextInput = {
   abortSignal?: AbortSignal;
   userId?: string;
   requestId?: string;
-  onStep?: (step: {
-    step_id: number;
-    step_type: "model" | "tool";
-    duration_ms: number;
-    outcome: "complete" | "error";
-  }) => void;
+  onStep?: (step: AgentStep) => void;
 };
 
 export async function* streamText(input: StreamTextInput): AsyncGenerator<AIStreamEvent> {

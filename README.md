@@ -11,6 +11,7 @@ A small full-stack starting point for building authenticated AI applications.
 - Better Auth with email/password
 - One authenticated project CRUD domain
 - Authenticated, bounded OpenAI-compatible text streaming
+- A bounded single-agent runner with validated read tools
 - An opt-in behavioral evaluation command
 - Docker-based local database
 
@@ -110,7 +111,7 @@ operations, contracts, router, then frontend query/mutations. Keep ownership
 checks in the server and use `protectedProcedure` for authenticated routes.
 
 For a model feature, reuse the provider configuration in `packages/inference/src/provider.ts`.
-Keep text streaming in packages/inference/src/index.ts.
+Keep text streaming in `packages/inference/src/index.ts` and orchestration in `packages/inference/src/agent.ts`.
 Update the browser-safe `packages/inference/src/contracts.ts`, HTTP adapter,
 frontend reader and tests together when changing stream events.
 

@@ -2,7 +2,7 @@
 
 Read [README.md](README.md) for setup. Before changing transport, inference,
 frontend boundaries, or database behavior, read [docs/blueprint.md](docs/blueprint.md).
-For AI evaluation, telemetry, model context, also
+For AI evaluation, telemetry, model context, execution budgets, also
 read the relevant topic linked in [AI development principles](docs/blueprint.md#ai-development-principles).
 
 - Keep business operations in `packages/trpc/src/domain` and SQL in `database/access`.
